@@ -1,8 +1,11 @@
 import { auth, googleProvider } from '../firebase/config';
 import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
+  updateProfile,
 } from 'firebase/auth';
 
 /**
@@ -15,6 +18,42 @@ export const loginWithGoogle = async () => {
     return result.user;
   } catch (error) {
     console.error('Error signing in with Google:', error);
+    throw error;
+  }
+};
+
+/**
+ * Register user with email/password
+ * @param {string} email
+ * @param {string} password
+ * @param {string} displayName
+ * @returns {Promise<User>}
+ */
+export const registerWithEmail = async (email, password, displayName = '') => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    if (displayName) {
+      await updateProfile(result.user, { displayName });
+    }
+    return result.user;
+  } catch (error) {
+    console.error('Error registering user:', error);
+    throw error;
+  }
+};
+
+/**
+ * Login user with email/password
+ * @param {string} email
+ * @param {string} password
+ * @returns {Promise<User>}
+ */
+export const loginWithEmail = async (email, password) => {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result.user;
+  } catch (error) {
+    console.error('Error logging in user:', error);
     throw error;
   }
 };

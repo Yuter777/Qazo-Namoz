@@ -3,9 +3,11 @@ import uz from './locales/uz.js';
 import ru from './locales/ru.js';
 import en from './locales/en.js';
 
+const savedLocale = localStorage.getItem('qazo-locale') || 'uz';
+
 const i18n = createI18n({
   legacy: false, // Use Composition API
-  locale: 'uz', // Default language
+  locale: savedLocale, // Default language
   fallbackLocale: 'en', // Fallback language
   messages: {
     uz,

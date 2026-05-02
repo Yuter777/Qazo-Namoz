@@ -2,25 +2,49 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { getCurrentUser } from '../services/authService';
 
 // Lazy load page components
+const Home = () => import('../pages/Home.vue');
 const Login = () => import('../pages/Login.vue');
 const Dashboard = () => import('../pages/Dashboard.vue');
+const Profile = () => import('../pages/Profile.vue');
+const Start = () => import('../pages/Start.vue');
+const Info = () => import('../pages/Info.vue');
 
 const routes = [
+  {
+    path: '/',
+    name: 'Home',
+    component: Home,
+    meta: { layout: 'desktop-mobile' },
+  },
   {
     path: '/login',
     name: 'Login',
     component: Login,
-    meta: { requiresGuest: true },
+    meta: { requiresGuest: true, layout: 'auth' },
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
     component: Dashboard,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, layout: 'desktop-mobile' },
   },
   {
-    path: '/',
-    redirect: '/dashboard',
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: true, layout: 'desktop-mobile' },
+  },
+  {
+    path: '/start',
+    name: 'Start',
+    component: Start,
+    meta: { layout: 'desktop-mobile' },
+  },
+  {
+    path: '/info',
+    name: 'Info',
+    component: Info,
+    meta: { layout: 'desktop-mobile' },
   },
 ];
 
