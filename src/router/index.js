@@ -1,73 +1,47 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import { getCurrentUser } from '../services/authService';
+import { createRouter, createWebHistory } from 'vue-router'
+import { getCurrentUser } from '../services/authService'
 
-// Lazy load page components
-const Home = () => import('../pages/Home.vue');
-const Login = () => import('../pages/Login.vue');
-const Dashboard = () => import('../pages/Dashboard.vue');
-const Profile = () => import('../pages/Profile.vue');
-const Start = () => import('../pages/Start.vue');
-const Info = () => import('../pages/Info.vue');
+const AppShell      = () => import('../components/AppShell.vue')
+const LoginPage     = () => import('../pages/Login.vue')
+const DashboardPage = () => import('../pages/Dashboard.vue')
+const TrackerPage   = () => import('../pages/TrackerPage.vue')
+const ProfilePage   = () => import('../pages/ProfilePage.vue')
+const InfoPage      = () => import('../pages/InfoPage.vue')
 
 const routes = [
   {
-    path: '/',
-    name: 'Home',
-    component: Home,
-    meta: { layout: 'desktop-mobile' },
-  },
-  {
     path: '/login',
     name: 'Login',
-    component: Login,
-    meta: { requiresGuest: true, layout: 'auth' },
+    component: LoginPage,
+    meta: { requiresGuest: true },
   },
   {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: Dashboard,
-    meta: { requiresAuth: true, layout: 'desktop-mobile' },
+    path: '/',
+    component: AppShell,
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', redirect: '/dashboard' },
+      { path: 'dashboard', name: 'Dashboard', component: DashboardPage },
+      { path: 'tracker',   name: 'Tracker',   component: TrackerPage   },
+      { path: 'profile',   name: 'Profile',   component: ProfilePage   },
+      { path: 'info',      name: 'Info',      component: InfoPage      },
+    ],
   },
-  {
-    path: '/profile',
-    name: 'Profile',
-    component: Profile,
-    meta: { requiresAuth: true, layout: 'desktop-mobile' },
-  },
-  {
-    path: '/start',
-    name: 'Start',
-    component: Start,
-    meta: { layout: 'desktop-mobile' },
-  },
-  {
-    path: '/info',
-    name: 'Info',
-    component: Info,
-    meta: { layout: 'desktop-mobile' },
-  },
-];
+]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
-});
+})
 
-// Navigation guards
-router.beforeEach(async (to, from, next) => {
-  const user = getCurrentUser();
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-  const requiresGuest = to.matched.some(record => record.meta.requiresGuest);
+router.beforeEach(async (to, _from, next) => {
+  const user = getCurrentUser()
+  const requiresAuth  = to.matched.some(r => r.meta.requiresAuth)
+  const requiresGuest = to.matched.some(r => r.meta.requiresGuest)
 
-  if (requiresAuth && !user) {
-    // Redirect to login if trying to access protected route
-    next({ name: 'Login' });
-  } else if (requiresGuest && user) {
-    // Redirect to dashboard if already logged in
-    next({ name: 'Dashboard' });
-  } else {
-    next();
-  }
-});
+  if (requiresAuth  && !user) return next({ name: 'Login' })
+  if (requiresGuest && user)  return next({ name: 'Dashboard' })
+  next()
+})
 
-export default router;
+export default router

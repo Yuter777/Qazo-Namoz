@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:api.anthropic.com)",
+      "Read(//c/Users/user/AppData/Local/Temp/**)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\user\\\\Desktop\\\\Code\\\\QazoNamaz\" -Recurse -Force | Where-Object { $_.FullName -notmatch \"node_modules\" -and $_.FullName -notmatch \"\\\\.git\" -and $_.FullName -notmatch \"\\\\.vscode\" -and $_.FullName -notmatch \"dist\" } | Select-Object @{Name='Path';Expression={$_.FullName.Replace\\('C:\\\\Users\\\\user\\\\Desktop\\\\Code\\\\QazoNamaz\\\\',''\\)}} -ExpandProperty Path | Sort-Object)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\user\\\\Desktop\\\\Code\\\\QazoNamaz\" -Recurse -Force | Where-Object { $_.FullName -notmatch \"node_modules\" -and $_.FullName -notmatch \"\\\\.git\" -and $_.FullName -notmatch \"\\\\.vscode\" -and $_.FullName -notmatch \"dist\" } | ForEach-Object { $_.FullName.Replace\\('C:\\\\Users\\\\user\\\\Desktop\\\\Code\\\\QazoNamaz\\\\',''\\) } | Sort-Object)",
+      "Bash(npm run *)"
+    ]
+  }
+}

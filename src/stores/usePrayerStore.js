@@ -1,128 +1,162 @@
-import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
-import { loadPrayerPlan, savePrayerPlan } from '../services/prayerPlanService';
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
+import { PRAYERS, EMPTY_COUNTS } from '../utils/prayerConstants'
+import { loadTracker, saveTracker, recordCompletion, loadHistory } from '../services/prayerService'
 
-const LOCALE_MAP = { ru: 'ru-RU', en: 'en-US', uz: 'uz-UZ' };
+const LS_KEY = 'qazo-tracker-v2'
+
+function loadLocal() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null') } catch { return null }
+}
+function saveLocal(data) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)) } catch {}
+}
+
+function todayKey() {
+  return new Date().toISOString().split('T')[0]
+}
 
 export const usePrayerStore = defineStore('prayer', () => {
-  const startDate = ref(localStorage.getItem('qazo-start-date') || '');
-  const endDate = ref(localStorage.getItem('qazo-end-date') || '');
-  const planDates = ref(JSON.parse(localStorage.getItem('qazo-plan-dates') || '[]'));
-  const completedDates = ref(new Set(JSON.parse(localStorage.getItem('qazo-completed-dates') || '[]')));
-  const planErrorKey = ref('');
-  const isHydrating = ref(false);
-  const uid = ref(null);
+  // ── State ──────────────────────────────────────────────────
+  const local     = loadLocal()
+  const qazo      = ref(local?.qazo      || EMPTY_COUNTS())
+  const completedCounts = ref(local?.completedCounts || EMPTY_COUNTS())
+  const goals     = ref(local?.goals     || Object.fromEntries(PRAYERS.map(p => [p, 3])))
+  const history   = ref([])
+  const isLoading = ref(false)
+  const uid       = ref(null)
 
-  const completedCount = computed(() => completedDates.value.size);
-  const remainingCount = computed(() => Math.max(planDates.value.length - completedDates.value.size, 0));
-  const totalCount = computed(() => planDates.value.length);
+  // todayCount tracks completions in the current calendar day (resets on new day)
+  const _savedDay   = ref(local?.todayDay   || '')
+  const _savedToday = ref(local?.todayCount || EMPTY_COUNTS())
+  const todayCount  = computed(() => {
+    if (_savedDay.value !== todayKey()) return EMPTY_COUNTS()
+    return _savedToday.value
+  })
 
-  const _saveLocal = () => {
-    localStorage.setItem('qazo-start-date', startDate.value || '');
-    localStorage.setItem('qazo-end-date', endDate.value || '');
-    localStorage.setItem('qazo-plan-dates', JSON.stringify(planDates.value));
-    localStorage.setItem('qazo-completed-dates', JSON.stringify([...completedDates.value]));
-  };
+  // ── Persist helpers ───────────────────────────────────────
+  function _persist() {
+    const day = todayKey()
+    saveLocal({
+      qazo: qazo.value,
+      completedCounts: completedCounts.value,
+      goals: goals.value,
+      todayDay: day,
+      todayCount: _savedDay.value === day ? _savedToday.value : EMPTY_COUNTS(),
+    })
+  }
 
-  const _saveCloud = async () => {
-    if (isHydrating.value || !uid.value) return;
+  async function _syncToCloud() {
+    if (!uid.value) return
     try {
-      await savePrayerPlan(uid.value, {
-        startDate: startDate.value,
-        endDate: endDate.value,
-        planDates: planDates.value,
-        completedDates: [...completedDates.value],
-      });
-    } catch (err) {
-      console.error('Prayer plan sync error:', err);
+      await saveTracker(uid.value, {
+        qazo: qazo.value,
+        completedCounts: completedCounts.value,
+        goals: goals.value,
+      })
+    } catch (e) {
+      console.error('Tracker sync error:', e)
     }
-  };
+  }
 
-  const hydrateFromCloud = async (userUid) => {
-    uid.value = userUid;
-    isHydrating.value = true;
+  // ── Hydrate from Firebase on login ───────────────────────
+  async function hydrateFromCloud(userUid) {
+    uid.value = userUid
+    isLoading.value = true
     try {
-      const data = await loadPrayerPlan(userUid);
-      if (!data) return;
-      startDate.value = data.startDate || '';
-      endDate.value = data.endDate || '';
-      planDates.value = data.planDates || [];
-      completedDates.value = new Set(data.completedDates || []);
-      _saveLocal();
+      const [data, hist] = await Promise.all([
+        loadTracker(userUid),
+        loadHistory(userUid),
+      ])
+      if (data) {
+        if (data.qazo)            qazo.value            = data.qazo
+        if (data.completedCounts) completedCounts.value = data.completedCounts
+        if (data.goals)           goals.value           = data.goals
+      }
+      history.value = hist
+
+      // Re-build todayCount from today's history
+      const today = todayKey()
+      const tc = EMPTY_COUNTS()
+      for (const entry of hist) {
+        const d = entry.trackedAt?.toDate ? entry.trackedAt.toDate() : new Date(entry.trackedAt)
+        if (d.toISOString().split('T')[0] === today) {
+          tc[entry.prayer] = (tc[entry.prayer] || 0) + 1
+        }
+      }
+      _savedDay.value   = today
+      _savedToday.value = tc
+      _persist()
     } finally {
-      isHydrating.value = false;
+      isLoading.value = false
     }
-  };
+  }
 
-  // Returns false on validation error; sets planErrorKey to an i18n key
-  const buildPlan = (start, end, locale) => {
-    planErrorKey.value = '';
+  // ── Actions ───────────────────────────────────────────────
+  function completePrayer(prayer) {
+    if ((qazo.value[prayer] || 0) <= 0) return
 
-    if (!start || !end) {
-      planErrorKey.value = 'home.missingDates';
-      return false;
+    // Update counts
+    qazo.value[prayer]            = Math.max(0, (qazo.value[prayer] || 0) - 1)
+    completedCounts.value[prayer] = (completedCounts.value[prayer] || 0) + 1
+
+    // Update today count
+    const day = todayKey()
+    if (_savedDay.value !== day) {
+      _savedDay.value   = day
+      _savedToday.value = EMPTY_COUNTS()
     }
+    _savedToday.value[prayer] = (_savedToday.value[prayer] || 0) + 1
 
-    const s = new Date(start);
-    const e = new Date(end);
+    // Prepend to local history
+    const entry = { id: Date.now().toString(), prayer, trackedAt: new Date() }
+    history.value = [entry, ...history.value]
 
-    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) {
-      planErrorKey.value = 'home.invalidDate';
-      return false;
+    _persist()
+
+    // Cloud record in background
+    if (uid.value) {
+      recordCompletion(uid.value, prayer).then(id => {
+        entry.id = id
+      }).catch(e => console.error(e))
+      _syncToCloud().catch(e => console.error(e))
     }
-    if (s > e) {
-      planErrorKey.value = 'home.badRange';
-      return false;
-    }
+  }
 
-    const dateLocale = LOCALE_MAP[locale] || 'uz-UZ';
-    const entries = [];
-    const cursor = new Date(s);
+  function addQazo(prayer, count) {
+    qazo.value[prayer] = (qazo.value[prayer] || 0) + Math.max(1, count)
+    _persist()
+    _syncToCloud()
+  }
 
-    while (cursor <= e) {
-      const iso = cursor.toISOString().split('T')[0];
-      entries.push({
-        date: iso,
-        label: cursor.toLocaleDateString(dateLocale, {
-          weekday: 'short',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
-      });
-      cursor.setDate(cursor.getDate() + 1);
-    }
+  function setQazoCounts(counts) {
+    PRAYERS.forEach(p => {
+      qazo.value[p]            = counts[p] || 0
+      completedCounts.value[p] = 0
+    })
+    _savedDay.value   = ''
+    _savedToday.value = EMPTY_COUNTS()
+    _persist()
+    _syncToCloud()
+  }
 
-    startDate.value = start;
-    endDate.value = end;
-    planDates.value = entries;
-    completedDates.value = new Set();
-    _saveLocal();
-    _saveCloud();
-    return true;
-  };
-
-  const toggleCompleted = (date) => {
-    const updated = new Set(completedDates.value);
-    if (updated.has(date)) updated.delete(date);
-    else updated.add(date);
-    completedDates.value = updated;
-    _saveLocal();
-    _saveCloud();
-  };
+  function setGoal(prayer, value) {
+    goals.value[prayer] = Math.max(0, value)
+    _persist()
+    _syncToCloud()
+  }
 
   return {
-    startDate,
-    endDate,
-    planDates,
-    completedDates,
-    planErrorKey,
-    isHydrating,
-    completedCount,
-    remainingCount,
-    totalCount,
+    qazo,
+    completedCounts,
+    goals,
+    history,
+    todayCount,
+    isLoading,
     hydrateFromCloud,
-    buildPlan,
-    toggleCompleted,
-  };
-});
+    completePrayer,
+    addQazo,
+    setQazoCounts,
+    setGoal,
+  }
+})
