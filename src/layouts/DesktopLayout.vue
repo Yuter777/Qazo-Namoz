@@ -10,7 +10,7 @@
 .desktop-layout {
   min-height: 100vh;
   margin: 0 auto;
-  max-width: 1280;
+  max-width: 1280px;
 }
 
 .content {

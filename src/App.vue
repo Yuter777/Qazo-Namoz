@@ -8,36 +8,22 @@ import { useRoute } from 'vue-router';
 import AuthLayout from './layouts/AuthLayout.vue';
 import DesktopLayout from './layouts/DesktopLayout.vue';
 import MobileLayout from './layouts/MobileLayout.vue';
+import { useUiStore } from './stores/useUiStore.js';
+import { useAuthStore } from './stores/useAuthStore.js';
 
 const route = useRoute();
 const screenWidth = ref(window.innerWidth);
+
+// Instantiate stores globally — applies theme to DOM and subscribes to Firebase auth
+useUiStore();
+useAuthStore();
 
 const handleResize = () => {
   screenWidth.value = window.innerWidth;
 };
 
-const applyTheme = () => {
-  const theme = localStorage.getItem('qazo-theme') || 'light';
-  document.documentElement.setAttribute('data-theme', theme);
-  document.body.setAttribute('data-theme', theme);
-};
-
-const handleThemeChange = () => {
-  applyTheme();
-};
-
-onMounted(() => {
-  window.addEventListener('resize', handleResize);
-  window.addEventListener('storage', handleThemeChange);
-  window.addEventListener('qazo-theme-change', handleThemeChange);
-  applyTheme();
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize);
-  window.removeEventListener('storage', handleThemeChange);
-  window.removeEventListener('qazo-theme-change', handleThemeChange);
-});
+onMounted(() => window.addEventListener('resize', handleResize));
+onBeforeUnmount(() => window.removeEventListener('resize', handleResize));
 
 const isMobile = computed(() => screenWidth.value < 700);
 
@@ -45,9 +31,7 @@ const resolvedLayout = computed(() => {
   const routeLayout = route.meta.layout || 'desktop-mobile';
   if (routeLayout === 'auth') return AuthLayout;
   if (routeLayout === 'mobile') return MobileLayout;
-  if (routeLayout === 'desktop-mobile') {
-    return isMobile.value ? MobileLayout : DesktopLayout;
-  }
+  if (routeLayout === 'desktop-mobile') return isMobile.value ? MobileLayout : DesktopLayout;
   return DesktopLayout;
 });
 </script>
@@ -61,14 +45,14 @@ body,
 
 body {
   margin: 0;
-  background: #f8fafc;
+  background: #fafaf9;
   color: #111827;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-html[data-theme='dark'] body,
+[data-theme='dark'] body,
 body[data-theme='dark'] {
-  background: #0f1115;
+  background: #0b0f19;
   color: #f3f4f6;
 }
 </style>

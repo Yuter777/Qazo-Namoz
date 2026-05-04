@@ -1,57 +1,57 @@
 <template>
-  <main class="profile-page">
+  <main class="profile-page" :class="{ dark: isDark }">
     <section class="card">
       <div class="header">
-        <h1>Profile</h1>
-        <router-link class="ghost-btn" to="/">Home</router-link>
+        <h1>{{ t('profile.title') }}</h1>
+        <router-link class="ghost-btn" to="/">{{ t('navigation.home') }}</router-link>
       </div>
 
-      <p class="muted">Foydalanuvchi ma'lumotlari va saqlangan qazo reja holati.</p>
+      <p class="muted">{{ t('profile.userInfo') }}</p>
 
       <div class="grid">
         <div class="item">
-          <span class="label">Ism</span>
+          <span class="label">{{ t('profile.name') }}</span>
           <strong>{{ userInfo.name }}</strong>
         </div>
         <div class="item">
-          <span class="label">Email</span>
+          <span class="label">{{ t('profile.email') }}</span>
           <strong>{{ userInfo.email }}</strong>
         </div>
         <div class="item">
-          <span class="label">User ID</span>
+          <span class="label">{{ t('profile.userId') }}</span>
           <code>{{ userInfo.uid }}</code>
         </div>
         <div class="item">
-          <span class="label">Auth turi</span>
+          <span class="label">{{ t('profile.authType') }}</span>
           <strong>{{ userInfo.provider }}</strong>
         </div>
       </div>
     </section>
 
     <section class="card">
-      <h2>Qazo plan statistikasi</h2>
-      <p v-if="isLoading" class="muted">Yuklanmoqda...</p>
-      <p v-else-if="!planExists" class="muted">Hozircha cloud'da saqlangan reja yo'q.</p>
+      <h2>{{ t('profile.planStats') }}</h2>
+      <p v-if="prayerStore.isHydrating" class="muted">{{ t('profile.loading') }}</p>
+      <p v-else-if="!prayerStore.planDates.length" class="muted">{{ t('profile.noPlan') }}</p>
       <div v-else class="grid stats">
         <div class="item">
-          <span class="label">Boshlanish</span>
-          <strong>{{ plan.startDate || '-' }}</strong>
+          <span class="label">{{ t('profile.startDate') }}</span>
+          <strong>{{ prayerStore.startDate || '-' }}</strong>
         </div>
         <div class="item">
-          <span class="label">Tugash</span>
-          <strong>{{ plan.endDate || '-' }}</strong>
+          <span class="label">{{ t('profile.endDate') }}</span>
+          <strong>{{ prayerStore.endDate || '-' }}</strong>
         </div>
         <div class="item">
-          <span class="label">Jami kunlar</span>
-          <strong>{{ totalDays }}</strong>
+          <span class="label">{{ t('profile.totalDays') }}</span>
+          <strong>{{ prayerStore.totalCount }}</strong>
         </div>
         <div class="item">
-          <span class="label">Bajarilgan</span>
-          <strong>{{ completedDays }}</strong>
+          <span class="label">{{ t('profile.completed') }}</span>
+          <strong>{{ prayerStore.completedCount }}</strong>
         </div>
         <div class="item">
-          <span class="label">Qolgan</span>
-          <strong>{{ remainingDays }}</strong>
+          <span class="label">{{ t('profile.remaining') }}</span>
+          <strong>{{ prayerStore.remainingCount }}</strong>
         </div>
       </div>
     </section>
@@ -59,56 +59,27 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
-import { getCurrentUser, onAuthChange } from '../services/authService';
-import { loadPrayerPlan } from '../services/prayerPlanService';
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useUiStore } from '../stores/useUiStore.js';
+import { useAuthStore } from '../stores/useAuthStore.js';
+import { usePrayerStore } from '../stores/usePrayerStore.js';
 
-const isLoading = ref(true);
-const planExists = ref(false);
-const plan = ref({
-  startDate: '',
-  endDate: '',
-  planDates: [],
-  completedDates: [],
-});
+const { t } = useI18n();
+const uiStore = useUiStore();
+const authStore = useAuthStore();
+const prayerStore = usePrayerStore();
+
+const isDark = computed(() => uiStore.isDark);
 
 const userInfo = computed(() => {
-  const user = getCurrentUser();
+  const user = authStore.currentUser;
   return {
-    name: user?.displayName || 'Noma`lum',
+    name: user?.displayName || t('profile.unknown'),
     email: user?.email || '-',
     uid: user?.uid || '-',
     provider: user?.providerData?.[0]?.providerId || 'password',
   };
-});
-
-const totalDays = computed(() => plan.value.planDates?.length || 0);
-const completedDays = computed(() => plan.value.completedDates?.length || 0);
-const remainingDays = computed(() => Math.max(totalDays.value - completedDays.value, 0));
-
-onAuthChange(async (user) => {
-  if (!user?.uid) {
-    isLoading.value = false;
-    return;
-  }
-
-  isLoading.value = true;
-  try {
-    const cloudPlan = await loadPrayerPlan(user.uid);
-    if (cloudPlan) {
-      plan.value = {
-        startDate: cloudPlan.startDate || '',
-        endDate: cloudPlan.endDate || '',
-        planDates: cloudPlan.planDates || [],
-        completedDates: cloudPlan.completedDates || [],
-      };
-      planExists.value = true;
-      return;
-    }
-    planExists.value = false;
-  } finally {
-    isLoading.value = false;
-  }
 });
 </script>
 
@@ -116,9 +87,15 @@ onAuthChange(async (user) => {
 .profile-page {
   min-height: 100vh;
   padding: 24px;
-  background: #f8fafc;
+  background: #fafaf9;
   display: grid;
   gap: 16px;
+  align-content: start;
+}
+
+.dark.profile-page {
+  background: #0b0f19;
+  color: #f3f4f6;
 }
 
 .card {
@@ -130,6 +107,11 @@ onAuthChange(async (user) => {
   padding: 20px;
 }
 
+.dark .card {
+  background: #111827;
+  border-color: #1f2937;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -137,7 +119,8 @@ onAuthChange(async (user) => {
   gap: 12px;
 }
 
-h1, h2 {
+h1,
+h2 {
   margin: 0;
 }
 
@@ -147,10 +130,17 @@ h1, h2 {
   border-radius: 10px;
   padding: 8px 12px;
   color: #0f172a;
+  font-size: 14px;
+}
+
+.dark .ghost-btn {
+  border-color: #374151;
+  color: #f3f4f6;
 }
 
 .muted {
-  color: #64748b;
+  color: #6b7280;
+  margin: 8px 0 0;
 }
 
 .grid {
@@ -168,8 +158,12 @@ h1, h2 {
   gap: 4px;
 }
 
+.dark .item {
+  border-color: #1f2937;
+}
+
 .label {
-  color: #64748b;
+  color: #6b7280;
   font-size: 13px;
 }
 
