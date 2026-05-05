@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import { db } from '../firebase/config'
 import {
   doc, getDoc, updateDoc, addDoc, deleteDoc,
-  collection, getDocs, query, where, orderBy, limit,
+  collection, getDocs, query, where,
   serverTimestamp, increment, runTransaction,
 } from 'firebase/firestore'
 import { PRAYERS } from '../utils/prayerConstants'
@@ -21,7 +21,7 @@ const dailyGoals   = ref({ ...DEFAULT_GOALS })
 const showCongrats = ref(false)
 const congratsDate = ref('')
 const streak       = ref(0)
-const isLoading    = ref(false)
+const isLoading    = ref(true)
 
 // All days that have at least one completion — used for live streak updates
 const historyDays = new Set()
@@ -57,20 +57,22 @@ export function usePrayerTracker() {
     try {
       const today = fmtDate()
 
+      const oneYearAgo = new Date()
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+      const cutoff = fmtDate(oneYearAgo)
+
       const [userSnap, todaySnap, recentSnap] = await Promise.all([
         getDoc(doc(db, 'users', uid)),
 
-        // Today's completions — no composite index needed (single-field filter)
         getDocs(query(
           collection(db, 'users', uid, 'history'),
           where('date', '==', today),
         )),
 
-        // Recent history for streak (covers 200 completions ≈ 30+ days at 6/day)
+        // All entries from the past year — single-field filter, no composite index
         getDocs(query(
           collection(db, 'users', uid, 'history'),
-          orderBy('createdAt', 'desc'),
-          limit(200),
+          where('date', '>=', cutoff),
         )),
       ])
 
@@ -83,7 +85,13 @@ export function usePrayerTracker() {
       // ── Rebuild today's count + entry IDs ────────────────────────────────
       const count   = Object.fromEntries(PRAYERS.map((p) => [p, 0]))
       const entries = Object.fromEntries(PRAYERS.map((p) => [p, []]))
-      todaySnap.forEach((d) => {
+
+      // Sort by createdAt ascending so entries[p].at(-1) is always the newest tap
+      const todayDocs = []
+      todaySnap.forEach((d) => todayDocs.push(d))
+      todayDocs.sort((a, b) => (a.data().createdAt?.toMillis?.() ?? 0) - (b.data().createdAt?.toMillis?.() ?? 0))
+
+      todayDocs.forEach((d) => {
         const { prayerName } = d.data()
         if (PRAYERS.includes(prayerName)) {
           count[prayerName]++
@@ -111,36 +119,45 @@ export function usePrayerTracker() {
    * Writes one history entry and increments qazoCount on the user doc.
    */
   async function addPrayerDone(uid, prayerName) {
-    isLoading.value = true
-    try {
-      const now    = new Date()
-      const today  = fmtDate(now)
-      const time   = fmtTime(now)
-      const isFirst = PRAYERS.every((p) => (todayCount.value[p] || 0) === 0)
+    const now    = new Date()
+    const today  = fmtDate(now)
+    const time   = fmtTime(now)
+    const isFirst = PRAYERS.every((p) => (todayCount.value[p] || 0) === 0)
 
+    // Optimistic update — UI responds instantly, Firestore write happens behind
+    const tempId = `opt-${Date.now()}`
+    todayCount.value   = { ...todayCount.value,   [prayerName]: (todayCount.value[prayerName] || 0) + 1 }
+    todayEntries.value = { ...todayEntries.value, [prayerName]: [...(todayEntries.value[prayerName] || []), tempId] }
+    if (isFirst) { historyDays.add(today); computeStreak() }
+    _maybeShowCongrats()
+
+    try {
       const docRef = await addDoc(collection(db, 'users', uid, 'history'), {
         prayerName,
+        prayer:    prayerName,
         date:      today,
         time,
         status:    'done',
         createdAt: serverTimestamp(),
+        trackedAt: serverTimestamp(),
       })
       await updateDoc(doc(db, 'users', uid), { qazoCount: increment(1) })
 
-      // ── Reactive update ──────────────────────────────────────────────────
-      todayCount.value   = { ...todayCount.value,   [prayerName]: (todayCount.value[prayerName] || 0) + 1 }
-      todayEntries.value = { ...todayEntries.value, [prayerName]: [...(todayEntries.value[prayerName] || []), docRef.id] }
-
-      // First prayer today → add today to historyDays and recompute streak
-      if (isFirst) {
-        historyDays.add(today)
-        computeStreak()
+      // Swap tempId for the real Firestore ID
+      const cur = todayEntries.value[prayerName] || []
+      const idx = cur.indexOf(tempId)
+      if (idx !== -1) {
+        const updated = [...cur]
+        updated[idx] = docRef.id
+        todayEntries.value = { ...todayEntries.value, [prayerName]: updated }
       }
-
-      _maybeShowCongrats()
       return true
-    } finally {
-      isLoading.value = false
+    } catch (e) {
+      // Rollback on network failure
+      todayCount.value   = { ...todayCount.value,   [prayerName]: Math.max(0, (todayCount.value[prayerName] || 0) - 1) }
+      todayEntries.value = { ...todayEntries.value, [prayerName]: (todayEntries.value[prayerName] || []).filter(id => id !== tempId) }
+      console.error('[tracker] addPrayerDone failed:', e)
+      return false
     }
   }
 
@@ -152,27 +169,29 @@ export function usePrayerTracker() {
     const entries = todayEntries.value[prayerName] || []
     if (entries.length === 0) return false
 
-    isLoading.value = true
+    const lastId = entries[entries.length - 1]
+
+    // Optimistic update — UI responds instantly
+    todayEntries.value = { ...todayEntries.value, [prayerName]: entries.slice(0, -1) }
+    todayCount.value   = { ...todayCount.value,   [prayerName]: Math.max(0, (todayCount.value[prayerName] || 0) - 1) }
+
+    // Temp IDs were never confirmed in Firestore — nothing to delete
+    if (lastId.startsWith('opt-')) return true
+
     try {
-      const lastId = entries[entries.length - 1]
-
       await deleteDoc(doc(db, 'users', uid, 'history', lastId))
-
-      // Atomic decrement, never below 0
       await runTransaction(db, async (tx) => {
         const snap  = await tx.get(doc(db, 'users', uid))
         const count = snap.data()?.qazoCount ?? 0
         tx.update(doc(db, 'users', uid), { qazoCount: Math.max(0, count - 1) })
       })
-
-      // ── Reactive update ──────────────────────────────────────────────────
-      const newEntries = entries.slice(0, -1)
-      todayEntries.value = { ...todayEntries.value, [prayerName]: newEntries }
-      todayCount.value   = { ...todayCount.value,   [prayerName]: Math.max(0, (todayCount.value[prayerName] || 0) - 1) }
-
       return true
-    } finally {
-      isLoading.value = false
+    } catch (e) {
+      // Rollback on network failure
+      todayEntries.value = { ...todayEntries.value, [prayerName]: [...(todayEntries.value[prayerName] || []), lastId] }
+      todayCount.value   = { ...todayCount.value,   [prayerName]: (todayCount.value[prayerName] || 0) + 1 }
+      console.error('[tracker] undoPrayerDone failed:', e)
+      return false
     }
   }
 

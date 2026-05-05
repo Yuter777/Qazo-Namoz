@@ -28,19 +28,18 @@
 
         <div class="qn-section-label" style="padding-left: 0">{{ t('profile.dailyGoal') }}</div>
         <div class="qn-card" style="margin: 0">
-          <div
-            v-for="p in PRAYERS"
-            :key="p"
-            class="goal-row"
-          >
-            <div class="goal-label">{{ PRAYER_EMOJIS[p] }} {{ t(`prayers.${p}`) }}</div>
-            <input
-              class="goal-input"
-              type="number" min="0" max="50"
-              :value="tracker.dailyGoals.value[p] ?? 0"
-              @change="e => saveGoal(p, parseInt(e.target.value) || 0)"
-            />
-          </div>
+          <SkeletonGoalRows v-if="showGoalSkeleton" />
+          <template v-else>
+            <div v-for="p in PRAYERS" :key="p" class="goal-row">
+              <div class="goal-label">{{ PRAYER_EMOJIS[p] }} {{ t(`prayers.${p}`) }}</div>
+              <input
+                class="goal-input"
+                type="number" min="0" max="50"
+                :value="tracker.dailyGoals.value[p] ?? 0"
+                @change="e => saveGoal(p, parseInt(e.target.value) || 0)"
+              />
+            </div>
+          </template>
         </div>
       </div>
 
@@ -93,15 +92,18 @@
 
       <div class="qn-section-label">{{ t('profile.dailyGoal') }}</div>
       <div class="qn-card" style="margin: 0 20px">
-        <div v-for="p in PRAYERS" :key="p" class="goal-row">
-          <div class="goal-label">{{ PRAYER_EMOJIS[p] }} {{ t(`prayers.${p}`) }}</div>
-          <input
-            class="goal-input"
-            type="number" min="0" max="50"
-            :value="tracker.dailyGoals.value[p] ?? 0"
-            @change="e => saveGoal(p, parseInt(e.target.value) || 0)"
-          />
-        </div>
+        <SkeletonGoalRows v-if="showGoalSkeleton" />
+        <template v-else>
+          <div v-for="p in PRAYERS" :key="p" class="goal-row">
+            <div class="goal-label">{{ PRAYER_EMOJIS[p] }} {{ t(`prayers.${p}`) }}</div>
+            <input
+              class="goal-input"
+              type="number" min="0" max="50"
+              :value="tracker.dailyGoals.value[p] ?? 0"
+              @change="e => saveGoal(p, parseInt(e.target.value) || 0)"
+            />
+          </div>
+        </template>
       </div>
 
       <div class="qn-section-label">{{ t('profile.settings') }}</div>
@@ -142,14 +144,17 @@ import { useRouter } from 'vue-router'
 import { useAuthStore }     from '../stores/useAuthStore.js'
 import { useUiStore }       from '../stores/useUiStore.js'
 import { usePrayerTracker } from '../composables/usePrayerTracker.js'
+import { useSkeleton }      from '../composables/useSkeleton.js'
 import { PRAYERS, PRAYER_EMOJIS } from '../utils/prayerConstants.js'
 import { logout as firebaseSignOut } from '../services/authService.js'
+import SkeletonGoalRows from '../components/SkeletonGoalRows.vue'
 
 const { t, locale } = useI18n()
 const router      = useRouter()
 const authStore   = useAuthStore()
 const uiStore     = useUiStore()
 const tracker     = usePrayerTracker()
+const showGoalSkeleton = useSkeleton(tracker.isLoading)
 
 const notif = ref(true)
 

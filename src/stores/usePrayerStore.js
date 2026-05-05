@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { PRAYERS, EMPTY_COUNTS } from '../utils/prayerConstants'
-import { loadTracker, saveTracker, recordCompletion, loadHistory } from '../services/prayerService'
+import { loadTracker, saveTracker, loadHistory } from '../services/prayerService'
 
 const LS_KEY = 'qazo-tracker-v2'
 
@@ -23,7 +23,7 @@ export const usePrayerStore = defineStore('prayer', () => {
   const completedCounts = ref(local?.completedCounts || EMPTY_COUNTS())
   const goals     = ref(local?.goals     || Object.fromEntries(PRAYERS.map(p => [p, 3])))
   const history   = ref([])
-  const isLoading = ref(false)
+  const isLoading = ref(true)
   const uid       = ref(null)
 
   // todayCount tracks completions in the current calendar day (resets on new day)
@@ -114,11 +114,7 @@ export const usePrayerStore = defineStore('prayer', () => {
 
     _persist()
 
-    // Cloud record in background
     if (uid.value) {
-      recordCompletion(uid.value, prayer).then(id => {
-        entry.id = id
-      }).catch(e => console.error(e))
       _syncToCloud().catch(e => console.error(e))
     }
   }
@@ -133,7 +129,8 @@ export const usePrayerStore = defineStore('prayer', () => {
       _savedToday.value[prayer] = Math.max(0, (_savedToday.value[prayer] || 0) - 1)
     }
 
-    history.value = history.value.slice(1) // remove the most recent entry
+    const idx = history.value.findIndex(e => e.prayer === prayer)
+    if (idx !== -1) history.value = history.value.filter((_, i) => i !== idx)
 
     _persist()
     _syncToCloud()

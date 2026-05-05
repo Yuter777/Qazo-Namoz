@@ -14,8 +14,11 @@
       </svg>
     </div>
 
+    <!-- Loading skeleton -->
+    <SkeletonHistoryList v-if="showSkeleton" />
+
     <!-- Empty state -->
-    <div v-if="prayerStore.history.length === 0" class="empty-state">
+    <div v-else-if="prayerStore.history.length === 0" class="empty-state">
       <div style="font-size: 48px; margin-bottom: 12px">🕌</div>
       <div style="font-size: 15px">{{ t('tracker.noHistory') }}</div>
     </div>
@@ -83,11 +86,15 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { usePrayerStore } from '../stores/usePrayerStore.js'
+import { usePrayerStore }    from '../stores/usePrayerStore.js'
+import { useSkeleton }       from '../composables/useSkeleton.js'
 import { PRAYER_COLORS, PRAYER_EMOJIS } from '../utils/prayerConstants.js'
+import SkeletonHistoryList from '../components/SkeletonHistoryList.vue'
 
 const { t, locale } = useI18n()
 const prayerStore = usePrayerStore()
+
+const showSkeleton = useSkeleton(() => prayerStore.isLoading)
 
 function toDate(v) {
   if (!v) return new Date()
@@ -175,4 +182,5 @@ const groupedHistory = computed(() => {
   .desktop-tracker-wrap { display: block; padding: 0; }
   .mobile-tracker-wrap  { display: none; }
 }
+
 </style>
