@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getCurrentUser } from '../services/authService'
+import { authReady, useAuth } from '../composables/useAuth'
 
 const AppShell      = () => import('../components/AppShell.vue')
 const LoginPage     = () => import('../pages/Login.vue')
@@ -35,7 +35,14 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, _from, next) => {
-  const user = getCurrentUser()
+  // Wait for Firebase to resolve the initial auth state before any navigation.
+  // Without this, auth.currentUser is null on hard refresh and the user
+  // gets bounced to /login even though they are logged in.
+  await authReady
+
+  const { currentUser } = useAuth()
+  const user = currentUser.value
+
   const requiresAuth  = to.matched.some(r => r.meta.requiresAuth)
   const requiresGuest = to.matched.some(r => r.meta.requiresGuest)
 

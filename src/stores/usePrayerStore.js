@@ -123,6 +123,22 @@ export const usePrayerStore = defineStore('prayer', () => {
     }
   }
 
+  function uncompletePrayer(prayer) {
+    // Reverse a completePrayer call (used by undo in usePrayerTracker)
+    qazo.value[prayer]            = (qazo.value[prayer] || 0) + 1
+    completedCounts.value[prayer] = Math.max(0, (completedCounts.value[prayer] || 0) - 1)
+
+    const day = todayKey()
+    if (_savedDay.value === day) {
+      _savedToday.value[prayer] = Math.max(0, (_savedToday.value[prayer] || 0) - 1)
+    }
+
+    history.value = history.value.slice(1) // remove the most recent entry
+
+    _persist()
+    _syncToCloud()
+  }
+
   function addQazo(prayer, count) {
     qazo.value[prayer] = (qazo.value[prayer] || 0) + Math.max(1, count)
     _persist()
@@ -155,6 +171,7 @@ export const usePrayerStore = defineStore('prayer', () => {
     isLoading,
     hydrateFromCloud,
     completePrayer,
+    uncompletePrayer,
     addQazo,
     setQazoCounts,
     setGoal,

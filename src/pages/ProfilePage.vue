@@ -37,8 +37,8 @@
             <input
               class="goal-input"
               type="number" min="0" max="50"
-              :value="prayerStore.goals[p]"
-              @change="e => prayerStore.setGoal(p, parseInt(e.target.value) || 0)"
+              :value="tracker.dailyGoals.value[p] ?? 0"
+              @change="e => saveGoal(p, parseInt(e.target.value) || 0)"
             />
           </div>
         </div>
@@ -98,8 +98,8 @@
           <input
             class="goal-input"
             type="number" min="0" max="50"
-            :value="prayerStore.goals[p]"
-            @change="e => prayerStore.setGoal(p, parseInt(e.target.value) || 0)"
+            :value="tracker.dailyGoals.value[p] ?? 0"
+            @change="e => saveGoal(p, parseInt(e.target.value) || 0)"
           />
         </div>
       </div>
@@ -139,17 +139,17 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/useAuthStore.js'
-import { useUiStore } from '../stores/useUiStore.js'
-import { usePrayerStore } from '../stores/usePrayerStore.js'
+import { useAuthStore }     from '../stores/useAuthStore.js'
+import { useUiStore }       from '../stores/useUiStore.js'
+import { usePrayerTracker } from '../composables/usePrayerTracker.js'
 import { PRAYERS, PRAYER_EMOJIS } from '../utils/prayerConstants.js'
 import { logout as firebaseSignOut } from '../services/authService.js'
 
 const { t, locale } = useI18n()
-const router = useRouter()
+const router      = useRouter()
 const authStore   = useAuthStore()
 const uiStore     = useUiStore()
-const prayerStore = usePrayerStore()
+const tracker     = usePrayerTracker()
 
 const notif = ref(true)
 
@@ -161,6 +161,13 @@ const userInitial = computed(() => (displayName.value[0] || 'U').toUpperCase())
 function setLocale(l) {
   locale.value = l
   localStorage.setItem('qazo-locale', l)
+}
+
+async function saveGoal(prayer, value) {
+  const uid = authStore.currentUser?.uid
+  if (!uid) return
+  const updated = { ...tracker.dailyGoals.value, [prayer]: Math.max(0, value) }
+  await tracker.updateDailyGoals(uid, updated)
 }
 
 async function signOut() {

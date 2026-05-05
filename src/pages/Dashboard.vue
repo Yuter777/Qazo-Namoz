@@ -9,7 +9,7 @@
           <div style="font-size: 12px; opacity: 0.7; margin-top: 4px; text-transform: capitalize">{{ todayLabel }}</div>
         </div>
         <div class="streak-badge">
-          🔥 {{ streak }} {{ t('dashboard.streak') }}
+          🔥 {{ tracker.streak.value }} {{ t('dashboard.streak') }}
         </div>
       </div>
     </div>
@@ -21,7 +21,7 @@
         <div class="stat-label">{{ t('dashboard.totalQazo') }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-num" style="color: var(--green)">{{ todayTotal }}</div>
+        <div class="stat-num" style="color: var(--green)">{{ todayDoneCount }}</div>
         <div class="stat-label">{{ t('dashboard.completedToday') }}</div>
       </div>
       <div class="stat-card">
@@ -32,20 +32,17 @@
 
     <!-- Desktop 2-col layout -->
     <div class="desktop-dash-grid">
-      <!-- Left col: progress + heatmap -->
       <div class="desktop-dash-col">
         <div class="qn-section-label" style="padding-left: 0; padding-right: 0">{{ t('dashboard.progress') }}</div>
         <div class="qn-card" style="margin: 0">
           <DashboardProgress :qazo="prayerStore.qazo" :completed-counts="prayerStore.completedCounts" />
         </div>
-
         <div class="qn-section-label" style="padding-left: 0; padding-right: 0">{{ t('dashboard.heatmapTitle') }}</div>
         <div class="qn-card" style="margin: 0; padding: 16px 0 12px">
           <ActivityHeatmap :history="prayerStore.history" />
         </div>
       </div>
 
-      <!-- Right col: today plan + add btn -->
       <div class="desktop-dash-col">
         <div class="qn-section-label" style="padding-left: 0; padding-right: 0">{{ t('dashboard.todayPlan') }}</div>
         <div class="qn-card" style="margin: 0">
@@ -54,8 +51,11 @@
             :key="p"
             :prayer="p"
             :remaining="prayerStore.qazo[p]"
-            :today-count="prayerStore.todayCount[p]"
-            @complete="completePrayer(p)"
+            :today-count="tracker.todayCount.value[p] || 0"
+            :daily-goal="tracker.dailyGoals.value[p] || 0"
+            :is-busy="tracker.isLoading.value"
+            @complete="handleComplete(p)"
+            @undo="handleUndo(p)"
           />
         </div>
         <div style="margin-top: 12px">
@@ -85,8 +85,11 @@
           :key="p"
           :prayer="p"
           :remaining="prayerStore.qazo[p]"
-          :today-count="prayerStore.todayCount[p]"
-          @complete="completePrayer(p)"
+          :today-count="tracker.todayCount.value[p] || 0"
+          :daily-goal="tracker.dailyGoals.value[p] || 0"
+          :is-busy="tracker.isLoading.value"
+          @complete="handleComplete(p)"
+          @undo="handleUndo(p)"
         />
       </div>
       <div style="padding: 16px 20px 8px">
@@ -99,22 +102,26 @@
     <div style="padding-bottom: 12px" />
 
     <QuickAddModal v-if="showModal" @close="showModal = false" />
+    <CongratsModal :show="tracker.showCongrats.value" @close="tracker.showCongrats.value = false" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, defineComponent, h } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useAuthStore } from '../stores/useAuthStore.js'
-import { usePrayerStore } from '../stores/usePrayerStore.js'
+import { useAuthStore }     from '../stores/useAuthStore.js'
+import { usePrayerStore }   from '../stores/usePrayerStore.js'
+import { usePrayerTracker } from '../composables/usePrayerTracker.js'
 import { PRAYERS, PRAYER_EMOJIS, PRAYER_COLORS } from '../utils/prayerConstants.js'
 import ActivityHeatmap from '../components/ActivityHeatmap.vue'
-import QuickAddModal from '../components/QuickAddModal.vue'
-import ProgressRing from '../components/ProgressRing.vue'
+import QuickAddModal   from '../components/QuickAddModal.vue'
+import CongratsModal   from '../components/CongratsModal.vue'
+import ProgressRing    from '../components/ProgressRing.vue'
 
 const { t, locale } = useI18n()
 const authStore   = useAuthStore()
 const prayerStore = usePrayerStore()
+const tracker     = usePrayerTracker()
 
 const showModal = ref(false)
 
@@ -132,42 +139,50 @@ const todayLabel = computed(() =>
 const totalRemaining = computed(() =>
   PRAYERS.reduce((s, p) => s + (prayerStore.qazo[p] || 0), 0)
 )
-const todayTotal = computed(() =>
-  PRAYERS.reduce((s, p) => s + (prayerStore.todayCount[p] || 0), 0)
-)
-const remainingToday = computed(() =>
-  Math.max(0, 6 - PRAYERS.filter(p => (prayerStore.todayCount[p] || 0) > 0).length)
+
+// Total prayers completed today across all types
+const todayDoneCount = computed(() =>
+  PRAYERS.reduce((s, p) => s + (tracker.todayCount.value[p] || 0), 0)
 )
 
-const streak = computed(() => {
-  const byDay = new Map()
-  for (const entry of prayerStore.history) {
-    const d = entry.trackedAt?.toDate ? entry.trackedAt.toDate() : new Date(entry.trackedAt)
-    const iso = d.toISOString().split('T')[0]
-    byDay.set(iso, true)
+// Remaining = sum of unmet goals; falls back to (6 - prayer types done at least once)
+const remainingToday = computed(() => {
+  const hasGoals = PRAYERS.some((p) => (tracker.dailyGoals.value[p] || 0) > 0)
+  if (hasGoals) {
+    return PRAYERS.reduce((s, p) => {
+      const gap = (tracker.dailyGoals.value[p] || 0) - (tracker.todayCount.value[p] || 0)
+      return s + Math.max(0, gap)
+    }, 0)
   }
-  let count = 0
-  const d = new Date()
-  while (byDay.has(d.toISOString().split('T')[0])) {
-    count++
-    d.setDate(d.getDate() - 1)
-  }
-  return count
+  return 6 - PRAYERS.filter((p) => (tracker.todayCount.value[p] || 0) > 0).length
 })
 
-function completePrayer(prayer) {
-  prayerStore.completePrayer(prayer)
+// ── Actions ──────────────────────────────────────────────────────────────────
+async function handleComplete(prayer) {
+  const uid = authStore.currentUser?.uid
+  if (!uid || (prayerStore.qazo[prayer] || 0) <= 0) return
+
+  const added = await tracker.addPrayerDone(uid, prayer)
+  if (added) prayerStore.completePrayer(prayer)
 }
 
-// ── DashboardProgress sub-component (inline) ─────────────────
+async function handleUndo(prayer) {
+  const uid = authStore.currentUser?.uid
+  if (!uid) return
+
+  const undone = await tracker.undoPrayerDone(uid, prayer)
+  if (undone) prayerStore.uncompletePrayer(prayer)
+}
+
+// ── DashboardProgress (inline sub-component) ─────────────────────────────────
 const DashboardProgress = defineComponent({
   props: { qazo: Object, completedCounts: Object },
   setup(props) {
     const { t } = useI18n()
     const totalCompleted = computed(() => PRAYERS.reduce((s, p) => s + (props.completedCounts?.[p] || 0), 0))
     const totalRemaining = computed(() => PRAYERS.reduce((s, p) => s + (props.qazo?.[p] || 0), 0))
-    const grandTotal = computed(() => totalCompleted.value + totalRemaining.value)
-    const pct = computed(() => grandTotal.value > 0 ? Math.round((totalCompleted.value / grandTotal.value) * 100) : 0)
+    const grandTotal     = computed(() => totalCompleted.value + totalRemaining.value)
+    const pct            = computed(() => grandTotal.value > 0 ? Math.round((totalCompleted.value / grandTotal.value) * 100) : 0)
 
     return () => h('div', [
       h('div', { style: 'display:flex;flex-direction:column;align-items:center;padding:24px 20px 16px' }, [
@@ -176,9 +191,9 @@ const DashboardProgress = defineComponent({
           `${totalCompleted.value} / ${grandTotal.value} ${t('dashboard.done').toLowerCase()}`),
       ]),
       h('div', { style: 'padding:0 16px 16px;display:flex;flex-direction:column;gap:8px' },
-        PRAYERS.map(p => {
-          const comp  = props.completedCounts?.[p] || 0
-          const total = comp + (props.qazo?.[p] || 0)
+        PRAYERS.map((p) => {
+          const comp   = props.completedCounts?.[p] || 0
+          const total  = comp + (props.qazo?.[p] || 0)
           const barPct = total > 0 ? Math.round((comp / total) * 100) : 0
           return h('div', { key: p, style: 'display:flex;align-items:center;gap:10px' }, [
             h('div', { style: 'font-size:13px;font-weight:500;color:var(--text1);width:80px;flex-shrink:0;display:flex;align-items:center;gap:6px' }, [
@@ -196,60 +211,111 @@ const DashboardProgress = defineComponent({
   },
 })
 
-// ── PrayerRow sub-component (inline) ─────────────────────────
+// ── PrayerRow (inline sub-component) ─────────────────────────────────────────
 const PrayerRow = defineComponent({
   props: {
     prayer:     String,
     remaining:  { type: Number, default: 0 },
-    todayCount: { type: Number, default: 0 },
+    todayCount: { type: Number, default: 0 },  // completions today
+    dailyGoal:  { type: Number, default: 0 },  // target for today
+    isBusy:     { type: Boolean, default: false },
   },
-  emits: ['complete'],
+  emits: ['complete', 'undo'],
   setup(props, { emit }) {
     const { t } = useI18n()
-    const animKey = ref(0)
 
-    function handleTap() {
-      if (props.remaining <= 0) return
-      animKey.value = Date.now()
-      emit('complete')
-    }
+    const CheckIcon = () => h('svg', {
+      width: '16', height: '16', viewBox: '0 0 24 24',
+      fill: 'none', stroke: 'white', 'stroke-width': '2.5',
+      'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    }, [h('polyline', { points: '20 6 9 17 4 12' })])
 
-    const CheckIcon = () => h('svg', { width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'white', 'stroke-width': '2.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
-      [h('polyline', { points: '20 6 9 17 4 12' })])
-
-    const PlusIcon = () => h('svg', { width: '14', height: '14', viewBox: '0 0 24 24', fill: 'none', stroke: 'var(--text3)', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+    const PlusIcon = () => h('svg', {
+      width: '14', height: '14', viewBox: '0 0 24 24',
+      fill: 'none', stroke: 'currentColor', 'stroke-width': '2.5',
+      'stroke-linecap': 'round',
+    }, [
       h('line', { x1: '12', y1: '5', x2: '12', y2: '19' }),
-      h('line', { x1: '5', y1: '12', x2: '19', y2: '12' }),
+      h('line', { x1: '5',  y1: '12', x2: '19', y2: '12' }),
     ])
 
+    const MinusIcon = () => h('svg', {
+      width: '12', height: '12', viewBox: '0 0 24 24',
+      fill: 'none', stroke: 'currentColor', 'stroke-width': '2.5',
+      'stroke-linecap': 'round',
+    }, [h('line', { x1: '5', y1: '12', x2: '19', y2: '12' })])
+
     return () => {
-      const exhausted = props.remaining <= 0
+      const exhausted  = (props.remaining || 0) <= 0
+      const hasDone    = props.todayCount > 0
+      const goalMet    = props.dailyGoal > 0 && props.todayCount >= props.dailyGoal
+
       return h('div', {
         class: 'qn-prayer-row',
-        style: `opacity:${exhausted ? 0.5 : 1}`,
-        onClick: () => !exhausted && handleTap(),
+        style: `opacity:${exhausted && !hasDone ? 0.45 : 1};transition:opacity 0.2s`,
       }, [
-        h('div', { class: 'qn-prayer-icon', style: `background:${PRAYER_COLORS[props.prayer]}20` },
-          h('span', { style: 'font-size:20px' }, PRAYER_EMOJIS[props.prayer])),
+
+        // Prayer icon
+        h('div', {
+          class: 'qn-prayer-icon',
+          style: `background:${PRAYER_COLORS[props.prayer]}20`,
+        }, h('span', { style: 'font-size:20px' }, PRAYER_EMOJIS[props.prayer])),
+
+        // Text block
         h('div', { style: 'flex:1;min-width:0' }, [
-          h('div', { style: 'font-size:15px;font-weight:600;color:var(--text1)' }, t(`prayers.${props.prayer}`)),
-          h('div', { style: 'font-size:12px;color:var(--text2);margin-top:1px;display:flex;align-items:center;gap:6px' }, [
+          h('div', { style: 'font-size:15px;font-weight:600;color:var(--text1)' },
+            t(`prayers.${props.prayer}`)),
+          h('div', { style: 'font-size:12px;color:var(--text2);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap' }, [
+            // Remaining qazo count
             h('span', `${props.remaining} ${t('dashboard.count')} ${t('dashboard.remaining').toLowerCase()}`),
-            props.todayCount > 0 ? h('span', {
-              style: 'background:var(--green-light);color:#166534;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:600',
-            }, `+${props.todayCount} ${t('dashboard.done').toLowerCase()}`) : null,
+            // Today badge: shows "- 3 bajarildi" or "- ✓ 5/5"
+            hasDone ? h('span', {
+              style: `display:inline-flex;align-items:center;gap:3px;
+                      background:${goalMet ? 'var(--green-light,#dcfce7)' : 'var(--teal-light,#e6f7f4)'};
+                      color:${goalMet ? '#166534' : 'var(--teal-dark,#1a6b5a)'};
+                      border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600`,
+            }, [
+              h('span', '−'),
+              h('span', props.dailyGoal > 0
+                ? `${props.todayCount}/${props.dailyGoal} ${t('dashboard.done').toLowerCase()}`
+                : `${props.todayCount} ${t('dashboard.done').toLowerCase()}`
+              ),
+            ]) : null,
           ]),
         ]),
-        h('button', {
-          class: `qn-check-btn${props.todayCount > 0 ? ' done' : ''}`,
-          onClick: (e) => { e.stopPropagation(); !exhausted && handleTap() },
-        }, [
-          props.todayCount > 0
-            ? h('span', { key: animKey.value, class: 'check-anim', style: 'display:flex;align-items:center;justify-content:center' }, h(CheckIcon))
-            : h(PlusIcon),
-          props.todayCount > 1 ? h('span', {
-            style: 'position:absolute;top:-6px;right:-6px;background:var(--teal);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid white',
-          }, String(props.todayCount)) : null,
+
+        // Buttons (right side)
+        h('div', { style: 'display:flex;align-items:center;gap:6px;flex-shrink:0;position:relative' }, [
+
+          // ── Undo last completion ────────────────────────────────────────
+          hasDone
+            ? h('button', {
+                class: 'qn-undo-btn',
+                title: 'Oxirgi bajarishni bekor qilish',
+                disabled: props.isBusy,
+                onClick: (e) => { e.stopPropagation(); emit('undo') },
+              }, h(MinusIcon))
+            : null,
+
+          // ── Mark done (+ or ✓ with count badge) ────────────────────────
+          h('button', {
+            class: `qn-check-btn${hasDone ? ' done' : ''}`,
+            disabled: exhausted || props.isBusy,
+            style: 'position:relative',
+            onClick: (e) => { e.stopPropagation(); if (!exhausted) emit('complete') },
+          }, [
+            hasDone ? h(CheckIcon) : h(PlusIcon),
+            // Badge: show count when > 1
+            props.todayCount > 1
+              ? h('span', {
+                  style: `position:absolute;top:-7px;right:-7px;
+                          background:var(--teal);color:white;border-radius:50%;
+                          width:17px;height:17px;font-size:10px;font-weight:700;
+                          display:flex;align-items:center;justify-content:center;
+                          border:2px solid var(--bg2,white)`,
+                }, String(props.todayCount))
+              : null,
+          ]),
         ]),
       ])
     }
@@ -283,15 +349,22 @@ const PrayerRow = defineComponent({
   margin-top: 4px; flex-shrink: 0;
 }
 
+/* Undo (−) button */
+:deep(.qn-undo-btn) {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: none; color: var(--text2);
+  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+:deep(.qn-undo-btn:hover)    { background: var(--bg2); color: var(--text1); }
+:deep(.qn-undo-btn:disabled) { opacity: 0.35; cursor: not-allowed; }
+
 .desktop-dash-grid { display: none; }
 .mobile-only-dash  { display: block; }
 
 @media (min-width: 768px) {
-  .stat-grid {
-    padding: 24px 32px 0;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
+  .stat-grid { padding: 24px 32px 0; gap: 16px; }
   .stat-num  { font-size: 32px; }
   .stat-card { padding: 20px 16px; }
 
@@ -302,7 +375,7 @@ const PrayerRow = defineComponent({
     padding: 0 32px;
     margin-top: 24px;
   }
-  .desktop-dash-col { display: flex; flex-direction: column; gap: 0; }
+  .desktop-dash-col { display: flex; flex-direction: column; }
   .mobile-only-dash { display: none; }
 }
 </style>
