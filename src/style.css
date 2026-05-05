@@ -76,7 +76,7 @@ body {
 
 /* ── Bottom Nav (mobile) ── */
 .qn-nav {
-  position: absolute;
+  position: fixed;
   bottom: 0; left: 0; right: 0;
   height: 72px;
   background: var(--bg2);
