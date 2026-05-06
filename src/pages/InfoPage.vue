@@ -18,25 +18,6 @@
     </div>
 
     <!-- Prayer order -->
-    <div class="qn-section-label">{{ t('info.prayerOrder') }}</div>
-    <div class="qn-card" style="margin: 0 20px">
-      <div
-        v-for="(p, i) in PRAYERS"
-        :key="p"
-        class="order-row"
-        :style="{ borderBottom: i < 5 ? '1px solid var(--border)' : 'none' }"
-      >
-        <div
-          class="order-num"
-          :style="`background:${ORDER_COLORS[i]}20;color:${ORDER_COLORS[i]}`"
-        >{{ i + 1 }}</div>
-        <div style="font-size: 15px; font-weight: 500; color: var(--text1)">{{ PRAYER_EMOJIS[p] }}</div>
-        <div style="flex: 1; font-size: 14px; color: var(--text1); font-weight: 500">
-          {{ t(`prayers.${p}`) }}
-        </div>
-      </div>
-    </div>
-
     <div style="padding: 20px; text-align: center; color: var(--text3); font-size: 13px">
       v1.0 · {{ t('nav.appName') }}
     </div>
@@ -54,7 +35,6 @@ const ORDER_COLORS = ['#6366f1', '#f59e0b', '#3b82f6', '#f97316', '#8b5cf6', '#2
 
 const steps = computed(() => [
   t('info.step1'),
-  t('info.step2'),
   t('info.step3'),
   t('info.step4'),
 ])

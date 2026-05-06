@@ -70,11 +70,24 @@ const IconInfo = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 24
   h('line', { x1: '12', y1: '8', x2: '12', y2: '12' }),
   h('line', { x1: '12', y1: '16', x2: '12.01', y2: '16' }),
 ])
+const IconBook = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+  h('path', { d: 'M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z' }),
+  h('path', { d: 'M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z' }),
+])
+const IconTrophy = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+  h('path', { d: 'M6 9H4a2 2 0 01-2-2V5h4' }),
+  h('path', { d: 'M18 9h2a2 2 0 002-2V5h-4' }),
+  h('path', { d: 'M12 17v4' }),
+  h('path', { d: 'M8 21h8' }),
+  h('path', { d: 'M6 5h12v7a6 6 0 01-12 0V5z' }),
+])
 
 const navItems = [
-  { route: 'Dashboard', icon: IconHome, labelKey: 'nav.dashboard' },
-  { route: 'Tracker',   icon: IconList, labelKey: 'nav.tracker'   },
-  { route: 'Profile',   icon: IconUser, labelKey: 'nav.profile'   },
-  { route: 'Info',      icon: IconInfo, labelKey: 'nav.info'      },
+  { route: 'Dashboard',   icon: IconHome,   labelKey: 'nav.dashboard'   },
+  { route: 'Tracker',     icon: IconList,   labelKey: 'nav.tracker'     },
+  { route: 'Quran',       icon: IconBook,   labelKey: 'nav.quran'       },
+  { route: 'Leaderboard', icon: IconTrophy, labelKey: 'nav.leaderboard' },
+  { route: 'Profile',     icon: IconUser,   labelKey: 'nav.profile'     },
+  { route: 'Info',        icon: IconInfo,   labelKey: 'nav.info'        },
 ]
 </script>

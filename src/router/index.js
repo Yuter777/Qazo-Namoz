@@ -1,12 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { authReady, useAuth } from '../composables/useAuth'
 
-const AppShell      = () => import('../components/AppShell.vue')
-const LoginPage     = () => import('../pages/Login.vue')
-const DashboardPage = () => import('../pages/Dashboard.vue')
-const TrackerPage   = () => import('../pages/TrackerPage.vue')
-const ProfilePage   = () => import('../pages/ProfilePage.vue')
-const InfoPage      = () => import('../pages/InfoPage.vue')
+const AppShell         = () => import('../components/AppShell.vue')
+const LoginPage        = () => import('../pages/Login.vue')
+const DashboardPage    = () => import('../pages/Dashboard.vue')
+const TrackerPage      = () => import('../pages/TrackerPage.vue')
+const ProfilePage      = () => import('../pages/ProfilePage.vue')
+const InfoPage         = () => import('../pages/InfoPage.vue')
+const LeaderboardPage  = () => import('../pages/LeaderboardPage.vue')
+const QuranPage        = () => import('../pages/QuranPage.vue')
 
 const routes = [
   {
@@ -21,10 +23,12 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       { path: '', redirect: '/dashboard' },
-      { path: 'dashboard', name: 'Dashboard', component: DashboardPage },
-      { path: 'tracker',   name: 'Tracker',   component: TrackerPage   },
-      { path: 'profile',   name: 'Profile',   component: ProfilePage   },
-      { path: 'info',      name: 'Info',      component: InfoPage      },
+      { path: 'dashboard',    name: 'Dashboard',    component: DashboardPage   },
+      { path: 'tracker',      name: 'Tracker',      component: TrackerPage     },
+      { path: 'profile',      name: 'Profile',      component: ProfilePage     },
+      { path: 'info',         name: 'Info',         component: InfoPage        },
+      { path: 'leaderboard',  name: 'Leaderboard',  component: LeaderboardPage },
+      { path: 'quran',        name: 'Quran',        component: QuranPage       },
     ],
   },
 ]

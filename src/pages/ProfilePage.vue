@@ -64,12 +64,16 @@
 
         <div class="qn-section-label" style="padding-left: 0">{{ t('profile.account') }}</div>
         <div class="qn-card" style="margin: 0">
-          <div class="toggle-row" style="border-bottom: none">
+          <div class="toggle-row">
             <div class="toggle-label">{{ t('profile.signOut') }}</div>
             <button
               style="font-size: 13px; font-weight: 600; color: var(--red); background: none; border: none; cursor: pointer; font-family: inherit"
               @click="signOut"
             >{{ t('auth.logout') }}</button>
+          </div>
+          <div class="toggle-row" style="border-bottom: none">
+            <div class="toggle-label" style="color: #dc2626">Hisobni o'chirish</div>
+            <button class="danger-text-btn" @click="showDeleteModal = true">O'chirish</button>
           </div>
         </div>
       </div>
@@ -123,22 +127,34 @@
 
       <div class="qn-section-label">{{ t('profile.account') }}</div>
       <div class="qn-card" style="margin: 0 20px 8px">
-        <div class="toggle-row" style="border-bottom: none">
+        <div class="toggle-row">
           <div class="toggle-label">{{ t('profile.signOut') }}</div>
           <button
             style="font-size: 13px; font-weight: 600; color: var(--red); background: none; border: none; cursor: pointer; font-family: inherit"
             @click="signOut"
           >{{ t('auth.logout') }}</button>
         </div>
+        <div class="toggle-row" style="border-bottom: none">
+          <div class="toggle-label" style="color: #dc2626">Hisobni o'chirish</div>
+          <button class="danger-text-btn" @click="showDeleteModal = true">O'chirish</button>
+        </div>
       </div>
     </div>
 
     <div style="padding-bottom: 12px" />
+
+    <DeleteAccountModal
+      v-if="showDeleteModal"
+      :show="showDeleteModal"
+      :user-email="authStore.currentUser?.email || ''"
+      :uid="authStore.currentUser?.uid || ''"
+      @close="showDeleteModal = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore }     from '../stores/useAuthStore.js'
@@ -149,12 +165,15 @@ import { PRAYERS, PRAYER_EMOJIS } from '../utils/prayerConstants.js'
 import { logout as firebaseSignOut } from '../services/authService.js'
 import SkeletonGoalRows from '../components/SkeletonGoalRows.vue'
 
+const DeleteAccountModal = defineAsyncComponent(() => import('../components/DeleteAccountModal.vue'))
+
 const { t, locale } = useI18n()
 const router      = useRouter()
 const authStore   = useAuthStore()
 const uiStore     = useUiStore()
-const tracker     = usePrayerTracker()
+const tracker          = usePrayerTracker()
 const showGoalSkeleton = useSkeleton(tracker.isLoading)
+const showDeleteModal  = ref(false)
 
 const notif = ref(true)
 
@@ -226,6 +245,15 @@ async function signOut() {
 .toggle-row:last-child { border-bottom: none; }
 .toggle-label { font-size: 15px; color: var(--text1); }
 .toggle-sub   { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+.danger-text-btn {
+  font-size: 13px; font-weight: 600; color: #dc2626;
+  background: none; border: 1.5px solid #dc2626;
+  border-radius: 7px; padding: 5px 12px;
+  cursor: pointer; font-family: inherit;
+  transition: background 0.15s;
+}
+.danger-text-btn:hover { background: #fef2f2; }
 
 .desktop-profile-grid { display: none; }
 .mobile-only-profile  { display: block; }
