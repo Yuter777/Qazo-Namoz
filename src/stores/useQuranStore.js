@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import {
   getUserProgress, setSurahStatus, removeSurahStatus,
   getQuranSettings, saveQuranSettings,
+  getLastRead, saveLastRead,
 } from '../services/quranService'
 
 const API_BASE = 'https://api.alquran.cloud/v1'
@@ -11,7 +12,21 @@ export const useQuranStore = defineStore('quran', () => {
   // ── State ──────────────────────────────────────────────────────────────
   const surahs = ref([])
   const progress = ref({})   // { [surahId]: { surahId, status, updatedAt } }
-  const settings = ref({ autoplay: false, reciter: 'ar.alafasy' })
+  const settings = ref({
+    autoplay: false,
+    reciter: 'ar.alafasy',
+    showArabic: true,
+    showTranslation: true,
+    showTafsir: false,
+    showLatin: true,
+    fontSize: 'medium',
+  })
+
+  // Cache for fetched ayahs: { [surahId]: ayahsArray }
+  const surahCache = ref({})
+
+  // Last read position
+  const lastRead = ref(null) // { surahId, ayahNumber }
 
   const isLoadingSurahs = ref(false)
   const isLoadingProgress = ref(false)
@@ -43,18 +58,12 @@ export const useQuranStore = defineStore('quran', () => {
 
   const filteredSurahs = computed(() => {
     const q = searchQuery.value.toLowerCase().trim()
-    const list = q
-      ? mergedSurahs.value.filter(s =>
-          s.englishName.toLowerCase().includes(q) ||
-          s.name.includes(q) ||
-          String(s.number).includes(q)
-        )
-      : [...mergedSurahs.value]
-
-    return list.sort((a, b) => {
-      const ord = { learned: 0, learning: 1, null: 2 }
-      return (ord[a.status] ?? 2) - (ord[b.status] ?? 2)
-    })
+    if (!q) return mergedSurahs.value
+    return mergedSurahs.value.filter(s =>
+      s.englishName.toLowerCase().includes(q) ||
+      s.name.includes(q) ||
+      String(s.number).includes(q)
+    )
   })
 
   const learnedSurahs = computed(() =>
@@ -240,13 +249,65 @@ export const useQuranStore = defineStore('quran', () => {
     return savingIds.value.includes(String(surahId))
   }
 
+  // ── Ayah fetching with cache ────────────────────────────────────────────
+  async function fetchAyahs(surahId) {
+    const key = String(surahId)
+    if (surahCache.value[key]) return surahCache.value[key]
+    try {
+      const [arabicRes, latinRes, enRes] = await Promise.all([
+        fetch(`${API_BASE}/surah/${surahId}`),
+        fetch(`${API_BASE}/surah/${surahId}/en.transliteration`),
+        fetch(`${API_BASE}/surah/${surahId}/en.asad`),
+      ])
+      const [arabicJson, latinJson, enJson] = await Promise.all([
+        arabicRes.json(), latinRes.json(), enRes.json(),
+      ])
+      if (arabicJson.code !== 200) throw new Error('Arabic fetch failed')
+      const arabicAyahs = arabicJson.data.ayahs
+      const latinAyahs  = latinJson.code  === 200 ? latinJson.data.ayahs  : []
+      const enAyahs     = enJson.code     === 200 ? enJson.data.ayahs     : []
+      const merged = arabicAyahs.map((a, i) => ({
+        number:      i + 1,
+        arabic:      a.text,
+        latin:       latinAyahs[i]?.text  ?? '',
+        translation: enAyahs[i]?.text     ?? '',
+        tafsir:      null,
+      }))
+      surahCache.value = { ...surahCache.value, [key]: merged }
+      return merged
+    } catch (e) {
+      console.error('fetchAyahs:', e)
+      return null
+    }
+  }
+
+  // ── Last Read ───────────────────────────────────────────────────────────
+  async function loadLastRead(uid) {
+    try {
+      const data = await getLastRead(uid)
+      if (data) lastRead.value = data
+    } catch (e) {
+      console.error('loadLastRead:', e)
+    }
+  }
+
+  async function updateLastRead(uid, surahId, ayahNumber) {
+    lastRead.value = { surahId, ayahNumber }
+    try {
+      await saveLastRead(uid, { surahId, ayahNumber })
+    } catch (e) {
+      console.error('updateLastRead:', e)
+    }
+  }
+
   return {
-    surahs, progress, settings,
+    surahs, progress, settings, lastRead,
     isLoadingSurahs, isLoadingProgress, surahsLoaded, surahsError,
-    searchQuery, audioState, savingIds,
+    searchQuery, audioState, savingIds, surahCache,
     mergedSurahs, filteredSurahs, learnedSurahs, learningSurahs, stats,
     fetchSurahs, fetchProgress, setStatus, removeStatus,
     loadSettings, updateSettings,
     playSurah, stopAudio, isSaving,
+    fetchAyahs, loadLastRead, updateLastRead,
   }
 })

@@ -1,12 +1,15 @@
 <template>
   <div class="qn-page fade-in">
     <div class="qp-wrap">
-
       <!-- Page header -->
       <div class="page-header">
         <div>
-          <div class="page-title">📖 {{ t('quran.title') }}</div>
-          <div class="page-subtitle">{{ t('quran.subtitle') }}</div>
+          <div class="page-title m-auto mt-8 text-4xl text-center">
+            📖 {{ t("quran.title") }}
+          </div>
+          <div class="page-subtitle text-center py-3">
+            {{ t("quran.subtitle") }}
+          </div>
         </div>
       </div>
 
@@ -26,23 +29,24 @@
       </div>
 
       <!-- Tab panels (v-show to preserve scroll state) -->
-      <SurahList   v-show="activeTab === 'surahs'"   />
+      <SurahList v-show="activeTab === 'surahs'" />
       <ProgressTab v-show="activeTab === 'progress'" />
-      <StatsTab    v-show="activeTab === 'stats'"    />
+      <StatsTab v-show="activeTab === 'stats'" />
       <SettingsTab v-show="activeTab === 'settings'" />
-
     </div>
 
     <!-- Floating audio mini-player -->
     <transition name="audio-slide">
-      <div
-        v-if="quranStore.audioState.surahId !== null"
-        class="qp-audio-bar"
-      >
+      <div v-if="quranStore.audioState.surahId !== null" class="qp-audio-bar">
         <div class="qp-audio-info">
-          <span class="qp-audio-eyebrow">{{ t('quran.nowPlaying') }}</span>
-          <span class="qp-audio-name">{{ quranStore.audioState.surahName }}</span>
-          <span class="qp-audio-ayah">{{ t('quran.ayah') }} {{ quranStore.audioState.index + 1 }} / {{ quranStore.audioState.ayahs.length }}</span>
+          <span class="qp-audio-eyebrow">{{ t("quran.nowPlaying") }}</span>
+          <span class="qp-audio-name">{{
+            quranStore.audioState.surahName
+          }}</span>
+          <span class="qp-audio-ayah"
+            >{{ t("quran.ayah") }} {{ quranStore.audioState.index + 1 }} /
+            {{ quranStore.audioState.ayahs.length }}</span
+          >
         </div>
         <div class="qp-audio-controls">
           <button class="qp-audio-btn" @click="handlePlayPause">
@@ -50,58 +54,61 @@
             <span v-else-if="quranStore.audioState.isPlaying">⏸</span>
             <span v-else>▶</span>
           </button>
-          <button class="qp-audio-btn qp-audio-stop" @click="quranStore.stopAudio()" :title="t('quran.stop')">
+          <button
+            class="qp-audio-btn qp-audio-stop"
+            @click="quranStore.stopAudio()"
+            :title="t('quran.stop')"
+          >
             ⏹
           </button>
         </div>
       </div>
     </transition>
-
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useQuranStore } from '../stores/useQuranStore'
-import { useAuthStore } from '../stores/useAuthStore'
-import SurahList   from '../components/quran/SurahList.vue'
-import ProgressTab from '../components/quran/ProgressTab.vue'
-import StatsTab    from '../components/quran/StatsTab.vue'
-import SettingsTab from '../components/quran/SettingsTab.vue'
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useI18n } from "vue-i18n";
+import { useQuranStore } from "../stores/useQuranStore";
+import { useAuthStore } from "../stores/useAuthStore";
+import SurahList from "../components/quran/SurahList.vue";
+import ProgressTab from "../components/quran/ProgressTab.vue";
+import StatsTab from "../components/quran/StatsTab.vue";
+import SettingsTab from "../components/quran/SettingsTab.vue";
 
-const { t } = useI18n()
-const quranStore = useQuranStore()
-const authStore  = useAuthStore()
+const { t } = useI18n();
+const quranStore = useQuranStore();
+const authStore = useAuthStore();
 
-const activeTab = ref('surahs')
+const activeTab = ref("surahs");
 
 const tabs = computed(() => [
-  { key: 'surahs',   label: t('quran.tabs.surahs')   },
-  { key: 'progress', label: t('quran.tabs.progress')  },
-  { key: 'stats',    label: t('quran.tabs.stats')     },
-  { key: 'settings', label: t('quran.tabs.settings')  },
-])
+  { key: "surahs", label: t("quran.tabs.surahs") },
+  { key: "progress", label: t("quran.tabs.progress") },
+  { key: "stats", label: t("quran.tabs.stats") },
+  { key: "settings", label: t("quran.tabs.settings") },
+]);
 
 function handlePlayPause() {
-  const s = quranStore.audioState
-  if (s.surahId) quranStore.playSurah(s.surahId, s.surahName)
+  const s = quranStore.audioState;
+  if (s.surahId) quranStore.playSurah(s.surahId, s.surahName);
 }
 
 onMounted(async () => {
-  const uid = authStore.currentUser?.uid
-  await quranStore.fetchSurahs()
+  const uid = authStore.currentUser?.uid;
+  await quranStore.fetchSurahs();
   if (uid) {
     await Promise.all([
       quranStore.fetchProgress(uid),
       quranStore.loadSettings(uid),
-    ])
+    ]);
   }
-})
+});
 
 onUnmounted(() => {
-  quranStore.stopAudio()
-})
+  quranStore.stopAudio();
+});
 </script>
 
 <style scoped>
@@ -121,7 +128,9 @@ onUnmounted(() => {
   overflow-x: auto;
   scrollbar-width: none;
 }
-.qp-tabs::-webkit-scrollbar { display: none; }
+.qp-tabs::-webkit-scrollbar {
+  display: none;
+}
 
 .qp-tab-btn {
   flex: 1;
@@ -210,8 +219,12 @@ onUnmounted(() => {
   justify-content: center;
   transition: background 0.15s;
 }
-.qp-audio-btn:hover { background: rgba(255, 255, 255, 0.35); }
-.qp-audio-stop { font-size: 13px; }
+.qp-audio-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+.qp-audio-stop {
+  font-size: 13px;
+}
 
 /* ── Transitions ── */
 .audio-slide-enter-active,

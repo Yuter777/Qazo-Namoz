@@ -1,5 +1,6 @@
 <template>
-  <div class="si-card" :class="cardClass">
+  <div class="si-card" :class="cardClass" @click="goToDetail">
+
     <!-- Surah number badge -->
     <div class="si-num">{{ surah.number }}</div>
 
@@ -18,7 +19,8 @@
     </div>
 
     <!-- Action buttons -->
-    <div class="si-actions">
+    <div class="si-actions" @click.stop>
+
       <!-- Play / Pause -->
       <button
         class="si-btn si-play-btn"
@@ -27,9 +29,19 @@
         :title="t('quran.play')"
         @click="handlePlay"
       >
-        <span v-if="audioState.isLoading && audioState.surahId === surah.number">⌛</span>
-        <span v-else-if="isCurrentlyPlaying">⏸</span>
-        <span v-else>▶</span>
+        <svg v-if="audioState.isLoading && audioState.surahId === surah.number"
+          width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="si-spin">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        <svg v-else-if="isCurrentlyPlaying"
+          width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="6" y="4" width="4" height="16" rx="1"/>
+          <rect x="14" y="4" width="4" height="16" rx="1"/>
+        </svg>
+        <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
       </button>
 
       <!-- Mark Learned -->
@@ -39,7 +51,12 @@
         :disabled="saving"
         :title="t('quran.markLearned')"
         @click="handleStatus('learned')"
-      >✅</button>
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </button>
 
       <!-- Mark Learning -->
       <button
@@ -48,7 +65,13 @@
         :disabled="saving"
         :title="t('quran.markLearning')"
         @click="handleStatus('learning')"
-      >📖</button>
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </button>
 
       <!-- Remove status -->
       <button
@@ -57,7 +80,14 @@
         :disabled="saving"
         :title="t('quran.removeStatus')"
         @click="handleRemove"
-      >✕</button>
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
     </div>
   </div>
 </template>
@@ -65,6 +95,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useQuranStore } from '../../stores/useQuranStore'
 import { useAuthStore } from '../../stores/useAuthStore'
 
@@ -73,6 +104,7 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
+const router = useRouter()
 const quranStore = useQuranStore()
 const authStore = useAuthStore()
 
@@ -88,6 +120,10 @@ const cardClass = computed(() => ({
   'si-card-learned': props.surah.status === 'learned',
   'si-card-learning': props.surah.status === 'learning',
 }))
+
+function goToDetail() {
+  router.push({ name: 'SurahDetail', params: { id: props.surah.number } })
+}
 
 function handlePlay() {
   quranStore.playSurah(props.surah.number, props.surah.englishName)
@@ -121,6 +157,7 @@ function handleRemove() {
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   transition: border-color 0.2s, background 0.2s;
+  cursor: pointer;
 }
 .si-card:hover { border-color: var(--teal-mid); }
 
@@ -129,8 +166,8 @@ function handleRemove() {
   background: var(--green-light);
 }
 .si-card-learning {
-  border-color: #3B82F6 !important;
-  background: rgba(59, 130, 246, 0.06);
+  border-color: #F59E0B !important;
+  background: rgba(245, 158, 11, 0.06);
 }
 
 /* Number badge */
@@ -187,7 +224,7 @@ function handleRemove() {
   letter-spacing: 0.02em;
 }
 .si-tag-learned  { color: var(--green); border-color: var(--green); background: var(--green-light); }
-.si-tag-learning { color: #3B82F6; border-color: #3B82F6; background: rgba(59,130,246,0.1); }
+.si-tag-learning { color: #F59E0B; border-color: #F59E0B; background: rgba(245,158,11,0.1); }
 
 /* Actions */
 .si-actions {
@@ -197,37 +234,41 @@ function handleRemove() {
   flex-shrink: 0;
 }
 .si-btn {
-  width: 28px;
-  height: 28px;
+  width: 38px;
+  height: 38px;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: var(--bg);
   cursor: pointer;
-  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  color: var(--text2);
+  transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
 }
 .si-btn:hover:not(:disabled) {
   background: var(--teal-light);
   border-color: var(--teal-mid);
+  color: var(--teal);
 }
 .si-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-.si-play-btn { font-size: 11px; }
-.si-btn-active-play    { background: var(--teal-light) !important; border-color: var(--teal) !important; }
-.si-btn-active-learned { background: var(--green-light) !important; border-color: var(--green) !important; }
-.si-btn-active-learning{ background: rgba(59,130,246,0.12) !important; border-color: #3B82F6 !important; }
+.si-btn-active-play    { background: var(--teal-light) !important; border-color: var(--teal) !important; color: var(--teal) !important; }
+.si-btn-active-learned { background: var(--green-light) !important; border-color: var(--green) !important; color: var(--green) !important; }
+.si-btn-active-learning { background: rgba(245,158,11,0.12) !important; border-color: #F59E0B !important; color: #F59E0B !important; }
 .si-btn-remove {
   color: var(--red);
   border-color: transparent;
   background: transparent;
-  font-size: 11px;
-  font-weight: 700;
 }
 .si-btn-remove:hover:not(:disabled) {
   background: var(--red-light) !important;
   border-color: var(--red) !important;
+  color: var(--red) !important;
 }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.si-spin { animation: spin 0.9s linear infinite; }
 </style>

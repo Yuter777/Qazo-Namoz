@@ -65,11 +65,6 @@ const IconUser = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 24
   h('path', { d: 'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2' }),
   h('circle', { cx: '12', cy: '7', r: '4' }),
 ])
-const IconInfo = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
-  h('circle', { cx: '12', cy: '12', r: '10' }),
-  h('line', { x1: '12', y1: '8', x2: '12', y2: '12' }),
-  h('line', { x1: '12', y1: '16', x2: '12.01', y2: '16' }),
-])
 const IconBook = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
   h('path', { d: 'M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z' }),
   h('path', { d: 'M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z' }),
@@ -88,6 +83,5 @@ const navItems = [
   { route: 'Quran',       icon: IconBook,   labelKey: 'nav.quran'       },
   { route: 'Leaderboard', icon: IconTrophy, labelKey: 'nav.leaderboard' },
   { route: 'Profile',     icon: IconUser,   labelKey: 'nav.profile'     },
-  { route: 'Info',        icon: IconInfo,   labelKey: 'nav.info'        },
 ]
 </script>

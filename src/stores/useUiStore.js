@@ -8,6 +8,7 @@ export const useUiStore = defineStore('ui', () => {
   const _apply = (t) => {
     document.documentElement.setAttribute('data-theme', t);
     document.body.setAttribute('data-theme', t);
+    document.documentElement.classList.toggle('dark', t === 'dark');
   };
 
   const toggleTheme = () => {

@@ -6,6 +6,7 @@ import {
 const progressCol = (uid) => collection(db, 'users', uid, 'quranProgress')
 const progressDoc = (uid, surahId) => doc(db, 'users', uid, 'quranProgress', String(surahId))
 const settingsDoc = (uid) => doc(db, 'users', uid, 'settings', 'quran')
+const lastReadDoc  = (uid) => doc(db, 'users', uid, 'lastRead', 'quran')
 
 export async function getUserProgress(uid) {
   const snap = await getDocs(progressCol(uid))
@@ -33,4 +34,13 @@ export async function getQuranSettings(uid) {
 
 export async function saveQuranSettings(uid, settings) {
   await setDoc(settingsDoc(uid), settings, { merge: true })
+}
+
+export async function getLastRead(uid) {
+  const snap = await getDoc(lastReadDoc(uid))
+  return snap.exists() ? snap.data() : null
+}
+
+export async function saveLastRead(uid, data) {
+  await setDoc(lastReadDoc(uid), { ...data, savedAt: serverTimestamp() }, { merge: true })
 }

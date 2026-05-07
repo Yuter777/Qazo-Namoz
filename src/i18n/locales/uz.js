@@ -1,7 +1,7 @@
 export default {
   nav: {
     appName: "Qazo Namozi",
-    dashboard: "Bosh sahifa",
+    dashboard: "Menu",
     tracker: "Tarix",
     quran: "Qur'on",
     leaderboard: "Reyting",
@@ -94,7 +94,7 @@ export default {
   },
   quran: {
     title: "Qur'on",
-    subtitle: "Suralar va taraqqiyot",
+    subtitle: "Yod olingan suralarni beliglang",
     search: "Sura qidirish...",
     ayahs: "oyat",
     ayah: "Oyat",
@@ -112,7 +112,7 @@ export default {
     retry: "Qayta urinish",
     tabs: {
       surahs: "Suralar",
-      progress: "Taraqqiyot",
+      progress: "Yod olinganlar",
       stats: "Statistika",
       settings: "Sozlamalar",
     },
@@ -137,6 +137,21 @@ export default {
       reciter: "Qori",
       reciterSub: "Audio ovoz tanlang",
       currentReciter: "Joriy qori",
+      audio: "Audio",
+      display: "Ko'rinish",
+      displayTitle: "O'qish sozlamalari",
+      showArabic: "Arabcha ko'rsatish",
+      showLatin: "Lotincha ko'rsatish",
+      showTranslation: "Tarjimani ko'rsatish",
+      showTafsir: "Tafsirni ko'rsatish",
+      fontSize: "Shrift o'lchami",
+      fontSizeSmall: "Kichik",
+      fontSizeMedium: "O'rta",
+      fontSizeLarge: "Katta",
+    },
+    detail: {
+      tafsir: "Tafsir",
+      tafsirPlaceholder: "Bu oyat uchun tafsir mavjud emas.",
     },
   },
   leaderboard: {

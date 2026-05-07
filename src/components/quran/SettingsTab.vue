@@ -1,8 +1,9 @@
 <template>
   <div class="sett-wrap">
 
+    <!-- Audio settings -->
+    <div class="sett-section-title">{{ t('quran.settings.audio') }}</div>
     <div class="sett-card">
-      <!-- Autoplay toggle -->
       <div class="sett-row">
         <div class="sett-row-info">
           <div class="sett-label">{{ t('quran.settings.autoplay') }}</div>
@@ -16,7 +17,6 @@
 
       <div class="sett-divider" />
 
-      <!-- Reciter select -->
       <div class="sett-col">
         <div class="sett-label">{{ t('quran.settings.reciter') }}</div>
         <div class="sett-sub">{{ t('quran.settings.reciterSub') }}</div>
@@ -35,10 +35,69 @@
       </div>
     </div>
 
-    <!-- Current reciter info -->
     <div class="sett-info">
-      <span class="sett-info-label">🎙 {{ t('quran.settings.currentReciter') }}:</span>
+      <span class="sett-info-label">{{ t('quran.settings.currentReciter') }}:</span>
       <span class="sett-info-val">{{ currentReciterLabel }}</span>
+    </div>
+
+    <!-- Display settings -->
+    <div class="sett-section-title" style="margin-top:8px">{{ t('quran.settings.display') }}</div>
+    <div class="sett-card">
+      <div class="sett-row">
+        <div class="sett-row-info">
+          <div class="sett-label">{{ t('quran.settings.showArabic') }}</div>
+        </div>
+        <el-switch
+          :model-value="quranStore.settings.showArabic"
+          @change="val => save({ showArabic: val })"
+        />
+      </div>
+      <div class="sett-divider" />
+      <div class="sett-row">
+        <div class="sett-row-info">
+          <div class="sett-label">{{ t('quran.settings.showLatin') }}</div>
+        </div>
+        <el-switch
+          :model-value="quranStore.settings.showLatin"
+          @change="val => save({ showLatin: val })"
+        />
+      </div>
+      <div class="sett-divider" />
+      <div class="sett-row">
+        <div class="sett-row-info">
+          <div class="sett-label">{{ t('quran.settings.showTranslation') }}</div>
+        </div>
+        <el-switch
+          :model-value="quranStore.settings.showTranslation"
+          @change="val => save({ showTranslation: val })"
+        />
+      </div>
+      <div class="sett-divider" />
+      <div class="sett-row">
+        <div class="sett-row-info">
+          <div class="sett-label">{{ t('quran.settings.showTafsir') }}</div>
+        </div>
+        <el-switch
+          :model-value="quranStore.settings.showTafsir"
+          @change="val => save({ showTafsir: val })"
+        />
+      </div>
+    </div>
+
+    <!-- Font size -->
+    <div class="sett-card">
+      <div class="sett-col">
+        <div class="sett-label">{{ t('quran.settings.fontSize') }}</div>
+        <div class="sett-font-btns">
+          <button
+            v-for="size in FONT_SIZES"
+            :key="size.value"
+            class="sett-font-btn"
+            :class="{ active: quranStore.settings.fontSize === size.value }"
+            @click="save({ fontSize: size.value })"
+          >{{ size.label }}</button>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -55,10 +114,16 @@ const quranStore = useQuranStore()
 const authStore = useAuthStore()
 
 const RECITERS = [
-  { value: 'ar.alafasy',           label: 'Mishary Rashid Alafasy' },
+  { value: 'ar.alafasy',            label: 'Mishary Rashid Alafasy' },
   { value: 'ar.abdurrahmaansudais', label: 'Abdur Rahman Al-Sudais' },
-  { value: 'ar.minshawi',          label: 'Mohamed Siddiq Al-Minshawi' },
-  { value: 'ar.husary',            label: 'Mahmoud Khalil Al-Husary' },
+  { value: 'ar.minshawi',           label: 'Mohamed Siddiq Al-Minshawi' },
+  { value: 'ar.husary',             label: 'Mahmoud Khalil Al-Husary' },
+]
+
+const FONT_SIZES = [
+  { value: 'small',  label: 'S' },
+  { value: 'medium', label: 'M' },
+  { value: 'large',  label: 'L' },
 ]
 
 const currentReciterLabel = computed(() =>
@@ -81,7 +146,16 @@ function changeReciter(val) {
 .sett-wrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+}
+
+.sett-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 0 2px;
 }
 
 .sett-card {
@@ -97,9 +171,9 @@ function changeReciter(val) {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px;
+  padding: 14px 16px;
 }
-.sett-col { padding: 16px; }
+.sett-col { padding: 14px 16px; }
 .sett-divider { height: 1px; background: var(--border); }
 
 .sett-row-info { flex: 1; min-width: 0; }
@@ -118,4 +192,31 @@ function changeReciter(val) {
 }
 .sett-info-label { color: var(--text2); }
 .sett-info-val   { color: var(--text1); font-weight: 600; }
+
+.sett-font-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.sett-font-btn {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sett-font-btn.active {
+  background: var(--teal-light);
+  border-color: var(--teal);
+  color: var(--teal);
+}
+.sett-font-btn:hover:not(.active) {
+  border-color: var(--teal-mid);
+  color: var(--text1);
+}
 </style>
