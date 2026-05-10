@@ -17,13 +17,14 @@ export const useQuranStore = defineStore('quran', () => {
     reciter: 'ar.alafasy',
     showArabic: true,
     showTranslation: true,
-    showTafsir: false,
     showLatin: true,
     fontSize: 'medium',
   })
 
   // Cache for fetched ayahs: { [surahId]: ayahsArray }
-  const surahCache = ref({})
+  const CACHE_VERSION = 'uz2'
+  const _rawCache = JSON.parse(sessionStorage.getItem(`qazo-quran-${CACHE_VERSION}`) || '{}')
+  const surahCache = ref(_rawCache)
 
   // Last read position
   const lastRead = ref(null) // { surahId, ayahNumber }
@@ -254,26 +255,26 @@ export const useQuranStore = defineStore('quran', () => {
     const key = String(surahId)
     if (surahCache.value[key]) return surahCache.value[key]
     try {
-      const [arabicRes, latinRes, enRes] = await Promise.all([
+      const [arabicRes, latinRes, uzRes] = await Promise.all([
         fetch(`${API_BASE}/surah/${surahId}`),
         fetch(`${API_BASE}/surah/${surahId}/en.transliteration`),
-        fetch(`${API_BASE}/surah/${surahId}/en.asad`),
+        fetch(`${API_BASE}/surah/${surahId}/uz.sodik`),
       ])
-      const [arabicJson, latinJson, enJson] = await Promise.all([
-        arabicRes.json(), latinRes.json(), enRes.json(),
+      const [arabicJson, latinJson, uzJson] = await Promise.all([
+        arabicRes.json(), latinRes.json(), uzRes.json(),
       ])
       if (arabicJson.code !== 200) throw new Error('Arabic fetch failed')
       const arabicAyahs = arabicJson.data.ayahs
-      const latinAyahs  = latinJson.code  === 200 ? latinJson.data.ayahs  : []
-      const enAyahs     = enJson.code     === 200 ? enJson.data.ayahs     : []
+      const latinAyahs  = latinJson.code === 200 ? latinJson.data.ayahs : []
+      const uzAyahs     = uzJson.code    === 200 ? uzJson.data.ayahs    : []
       const merged = arabicAyahs.map((a, i) => ({
         number:      i + 1,
         arabic:      a.text,
-        latin:       latinAyahs[i]?.text  ?? '',
-        translation: enAyahs[i]?.text     ?? '',
-        tafsir:      null,
+        latin:       latinAyahs[i]?.text ?? '',
+        translation: uzAyahs[i]?.text    ?? '',
       }))
       surahCache.value = { ...surahCache.value, [key]: merged }
+      try { sessionStorage.setItem(`qazo-quran-${CACHE_VERSION}`, JSON.stringify(surahCache.value)) } catch {}
       return merged
     } catch (e) {
       console.error('fetchAyahs:', e)

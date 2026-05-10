@@ -23,12 +23,6 @@
         <span class="sm-label">{{ t('quran.settings.showTranslation') }}</span>
         <el-switch :model-value="settings.showTranslation" @change="emit('update', { showTranslation: $event })" />
       </div>
-      <div class="sm-divider" />
-      <div class="sm-row">
-        <span class="sm-label">{{ t('quran.settings.showTafsir') }}</span>
-        <el-switch :model-value="settings.showTafsir" @change="emit('update', { showTafsir: $event })" />
-      </div>
-
       <div class="sm-section">{{ t('quran.settings.fontSize') }}</div>
       <div class="sm-font-btns">
         <button

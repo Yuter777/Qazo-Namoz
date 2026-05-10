@@ -72,16 +72,6 @@
           @change="val => save({ showTranslation: val })"
         />
       </div>
-      <div class="sett-divider" />
-      <div class="sett-row">
-        <div class="sett-row-info">
-          <div class="sett-label">{{ t('quran.settings.showTafsir') }}</div>
-        </div>
-        <el-switch
-          :model-value="quranStore.settings.showTafsir"
-          @change="val => save({ showTafsir: val })"
-        />
-      </div>
     </div>
 
     <!-- Font size -->

@@ -24,11 +24,6 @@
       {{ ayah.translation }}
     </p>
 
-    <!-- Tafsir -->
-    <div v-if="settings.showTafsir" class="ayah-tafsir">
-      <div class="ayah-tafsir-label">{{ t('quran.detail.tafsir') }}</div>
-      <p class="ayah-tafsir-text">{{ ayah.tafsir ?? t('quran.detail.tafsirPlaceholder') }}</p>
-    </div>
   </div>
 </template>
 
@@ -114,25 +109,4 @@ const { t } = useI18n()
 .ayah-fs-medium .ayah-translation { font-size: 14px; }
 .ayah-fs-large  .ayah-translation { font-size: 16px; }
 
-/* Tafsir */
-.ayah-tafsir {
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-}
-.ayah-tafsir-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text2);
-  margin-bottom: 4px;
-}
-.ayah-tafsir-text {
-  margin: 0;
-  color: var(--text2);
-  line-height: 1.6;
-}
-.ayah-fs-small  .ayah-tafsir-text { font-size: 12px; }
-.ayah-fs-medium .ayah-tafsir-text { font-size: 13px; }
-.ayah-fs-large  .ayah-tafsir-text { font-size: 14px; }
 </style>
