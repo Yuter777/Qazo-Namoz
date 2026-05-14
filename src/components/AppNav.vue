@@ -83,8 +83,8 @@ const IconTrophy = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 
 
 const navItems = [
   { route: 'Dashboard',   icon: IconHome,   labelKey: 'nav.dashboard'   },
-  { route: 'Tracker',     icon: IconList,   labelKey: 'nav.tracker'     },
   { route: 'PrayerTimes', icon: IconClock,  labelKey: 'nav.prayerTimes' },
+  { route: 'Tracker',     icon: IconList,   labelKey: 'nav.tracker'     },
   { route: 'Quran',       icon: IconBook,   labelKey: 'nav.quran'       },
   { route: 'Leaderboard', icon: IconTrophy, labelKey: 'nav.leaderboard' },
   { route: 'Profile',     icon: IconUser,   labelKey: 'nav.profile'     },
