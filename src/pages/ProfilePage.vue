@@ -299,6 +299,7 @@ import { logout as firebaseSignOut } from "../services/authService.js";
 import SkeletonGoalRows from "../components/SkeletonGoalRows.vue";
 import "element-plus/es/components/dialog/style/css";
 import { ElDialog } from "element-plus";
+import { showSuccess, showInfo } from "../utils/message.js";
 
 const DeleteAccountModal = defineAsyncComponent(() =>
   import("../components/DeleteAccountModal.vue")
@@ -332,6 +333,7 @@ const userInitial = computed(() => (displayName.value[0] || "U").toUpperCase());
 function setLocale(l) {
   locale.value = l;
   localStorage.setItem("qazo-locale", l);
+  showInfo(t('messages.languageChanged'))
 }
 
 async function saveGoal(prayer, value) {
@@ -339,10 +341,12 @@ async function saveGoal(prayer, value) {
   if (!uid) return;
   const updated = { ...tracker.dailyGoals.value, [prayer]: Math.max(0, value) };
   await tracker.updateDailyGoals(uid, updated);
+  showSuccess(t('messages.goalSaved'))
 }
 
 async function signOut() {
   await firebaseSignOut();
+  showInfo(t('messages.logoutSuccess'))
   router.push({ name: "Login" });
 }
 </script>

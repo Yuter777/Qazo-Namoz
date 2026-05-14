@@ -5,6 +5,8 @@ import {
   getQuranSettings, saveQuranSettings,
   getLastRead, saveLastRead,
 } from '../services/quranService'
+import { showError, showSuccess } from '../utils/message.js'
+import i18n from '../i18n/index.js'
 
 const API_BASE = 'https://api.alquran.cloud/v1'
 
@@ -97,6 +99,7 @@ export const useQuranStore = defineStore('quran', () => {
     } catch (e) {
       surahsError.value = true
       console.error('fetchSurahs:', e)
+      showError(i18n.global.t('messages.loadError'))
     } finally {
       isLoadingSurahs.value = false
     }
@@ -124,12 +127,14 @@ export const useQuranStore = defineStore('quran', () => {
     savingIds.value = [...savingIds.value, key]
     try {
       await setSurahStatus(uid, surahId, status)
+      showSuccess(i18n.global.t('messages.quranStatusSaved'))
     } catch (e) {
       // Revert on failure
       const reverted = { ...progress.value }
       delete reverted[key]
       progress.value = reverted
       console.error('setStatus:', e)
+      showError(i18n.global.t('messages.quranStatusError'))
     } finally {
       savingIds.value = savingIds.value.filter(x => x !== key)
     }
@@ -149,6 +154,7 @@ export const useQuranStore = defineStore('quran', () => {
       // Revert on failure
       if (prev) progress.value = { ...progress.value, [key]: prev }
       console.error('removeStatus:', e)
+      showError(i18n.global.t('messages.quranStatusError'))
     } finally {
       savingIds.value = savingIds.value.filter(x => x !== key)
     }
@@ -201,6 +207,7 @@ export const useQuranStore = defineStore('quran', () => {
     } catch (e) {
       console.error('playSurah:', e)
       audioState.value.surahId = null
+      showError(i18n.global.t('messages.audioError'))
     } finally {
       audioState.value.isLoading = false
     }

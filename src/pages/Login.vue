@@ -12,8 +12,8 @@
 
       <!-- Tab switch -->
       <div class="tab-switch">
-        <button :class="{ active: !isSignup }" @click="isSignup = false">{{ t('auth.signIn') }}</button>
-        <button :class="{ active: isSignup }"  @click="isSignup = true">{{ t('auth.signUp') }}</button>
+        <button :class="{ active: !isSignup }" @click="switchTab(false)">{{ t('auth.signIn') }}</button>
+        <button :class="{ active: isSignup }"  @click="switchTab(true)">{{ t('auth.signUp') }}</button>
       </div>
 
       <!-- Form -->
@@ -28,11 +28,55 @@
         </div>
         <div class="field">
           <label>{{ t('auth.password') }}</label>
-          <input v-model="password" class="qn-input" type="password" placeholder="••••••••" />
+          <div class="input-wrap">
+            <input
+              v-model="password"
+              class="qn-input"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="••••••••"
+            />
+            <button type="button" class="eye-btn" @click="showPassword = !showPassword" :aria-label="showPassword ? 'Hide password' : 'Show password'">
+              <svg v-if="showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div v-if="isSignup" class="field">
+          <label>{{ t('auth.confirmPassword') }}</label>
+          <div class="input-wrap">
+            <input
+              v-model="confirmPassword"
+              class="qn-input"
+              :type="showConfirmPassword ? 'text' : 'password'"
+              placeholder="••••••••"
+              :class="{ 'input-error': confirmPassword && password !== confirmPassword }"
+            />
+            <button type="button" class="eye-btn" @click="showConfirmPassword = !showConfirmPassword" :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'">
+              <svg v-if="showConfirmPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          <span v-if="confirmPassword && password !== confirmPassword" class="field-error">
+            {{ t('auth.passwordMismatch') }}
+          </span>
         </div>
       </div>
 
-      <button class="qn-add-btn" :disabled="isLoading" @click="handleEmailAuth" style="margin-bottom: 10px">
+      <button class="qn-add-btn" :disabled="isLoading || isSubmitDisabled" @click="handleEmailAuth" style="margin-bottom: 10px">
         {{ isLoading ? t('common.loading') : (isSignup ? t('auth.createAccount') : t('auth.signIn')) }}
       </button>
 
@@ -52,51 +96,72 @@
         {{ t('auth.loginWithGoogle') }}
       </button>
 
-      <p v-if="errorMessage" class="error-msg">{{ errorMessage }}</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { loginWithEmail, loginWithGoogle, registerWithEmail } from '../services/authService'
+import { showSuccess, showError, showWarning } from '../utils/message.js'
 
 const router = useRouter()
 const { t } = useI18n()
 
-const isLoading    = ref(false)
-const errorMessage = ref('')
-const isSignup     = ref(false)
-const fullName     = ref('')
-const email        = ref('')
-const password     = ref('')
+const isLoading       = ref(false)
+const isSignup        = ref(false)
+const fullName        = ref('')
+const email           = ref('')
+const password        = ref('')
+const confirmPassword = ref('')
+const showPassword        = ref(false)
+const showConfirmPassword = ref(false)
+
+const isSubmitDisabled = computed(() =>
+  isSignup.value && !!confirmPassword.value && password.value !== confirmPassword.value
+)
+
+function switchTab(signup) {
+  isSignup.value = signup
+  password.value = ''
+  confirmPassword.value = ''
+  showPassword.value = false
+  showConfirmPassword.value = false
+}
 
 async function handleEmailAuth() {
-  errorMessage.value = ''
-  if (!email.value || !password.value) { errorMessage.value = t('auth.emailRequired'); return }
-  if (password.value.length < 6) { errorMessage.value = t('auth.passwordMinLength'); return }
+  if (!email.value || !password.value) { showWarning(t('auth.emailRequired')); return }
+  if (password.value.length < 6)       { showWarning(t('auth.passwordMinLength')); return }
+  if (isSignup.value && password.value !== confirmPassword.value) {
+    showWarning(t('auth.passwordMismatch')); return
+  }
   isLoading.value = true
   try {
-    if (isSignup.value) await registerWithEmail(email.value, password.value, fullName.value)
-    else                await loginWithEmail(email.value, password.value)
+    if (isSignup.value) {
+      await registerWithEmail(email.value, password.value, fullName.value)
+      showSuccess(t('messages.signupSuccess'))
+    } else {
+      await loginWithEmail(email.value, password.value)
+      showSuccess(t('messages.loginSuccess'))
+    }
     router.push({ name: 'Dashboard' })
   } catch (err) {
-    errorMessage.value = err?.message || t('auth.error')
+    showError(err?.message || t('auth.error'))
   } finally {
     isLoading.value = false
   }
 }
 
 async function handleGoogleLogin() {
-  errorMessage.value = ''
   isLoading.value = true
   try {
     await loginWithGoogle()
+    showSuccess(t('messages.googleLoginSuccess'))
     router.push({ name: 'Dashboard' })
   } catch (err) {
-    errorMessage.value = err?.message || t('auth.googleError')
+    showError(err?.message || t('auth.googleError'))
   } finally {
     isLoading.value = false
   }
@@ -132,6 +197,42 @@ async function handleGoogleLogin() {
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field label { font-size: 13px; font-weight: 500; color: var(--text2); }
 
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-wrap .qn-input {
+  width: 100%;
+  padding-right: 40px;
+}
+.eye-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+.eye-btn:hover { color: var(--text2); }
+.eye-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.input-error {
+  border-color: var(--red) !important;
+}
+.field-error {
+  font-size: 12px;
+  color: var(--red);
+  margin-top: 2px;
+}
+
 .google-btn {
   width: 100%;
   display: flex;
@@ -153,10 +254,4 @@ async function handleGoogleLogin() {
 .google-btn:hover { background: var(--teal-light); }
 .google-btn:disabled { opacity: 0.7; cursor: progress; }
 
-.error-msg {
-  margin-top: 12px;
-  color: var(--red);
-  font-size: 13px;
-  text-align: center;
-}
 </style>

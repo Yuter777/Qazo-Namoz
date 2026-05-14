@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { PRAYERS, EMPTY_COUNTS } from '../utils/prayerConstants'
 import { loadTracker, saveTracker, loadHistory } from '../services/prayerService'
+import { showError } from '../utils/message.js'
+import i18n from '../i18n/index.js'
 
 const LS_KEY = 'qazo-tracker-v2'
 
@@ -56,6 +58,7 @@ export const usePrayerStore = defineStore('prayer', () => {
       })
     } catch (e) {
       console.error('Tracker sync error:', e)
+      showError(i18n.global.t('messages.syncError'))
     }
   }
 
@@ -115,7 +118,7 @@ export const usePrayerStore = defineStore('prayer', () => {
     _persist()
 
     if (uid.value) {
-      _syncToCloud().catch(e => console.error(e))
+      _syncToCloud()
     }
   }
 

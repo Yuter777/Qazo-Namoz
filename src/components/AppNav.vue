@@ -69,6 +69,10 @@ const IconBook = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 24
   h('path', { d: 'M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z' }),
   h('path', { d: 'M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z' }),
 ])
+const IconClock = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
+  h('circle', { cx: '12', cy: '12', r: '10' }),
+  h('polyline', { points: '12 6 12 12 16 14' }),
+])
 const IconTrophy = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [
   h('path', { d: 'M6 9H4a2 2 0 01-2-2V5h4' }),
   h('path', { d: 'M18 9h2a2 2 0 002-2V5h-4' }),
@@ -80,6 +84,7 @@ const IconTrophy = () => h('svg', { width: '22', height: '22', viewBox: '0 0 24 
 const navItems = [
   { route: 'Dashboard',   icon: IconHome,   labelKey: 'nav.dashboard'   },
   { route: 'Tracker',     icon: IconList,   labelKey: 'nav.tracker'     },
+  { route: 'PrayerTimes', icon: IconClock,  labelKey: 'nav.prayerTimes' },
   { route: 'Quran',       icon: IconBook,   labelKey: 'nav.quran'       },
   { route: 'Leaderboard', icon: IconTrophy, labelKey: 'nav.leaderboard' },
   { route: 'Profile',     icon: IconUser,   labelKey: 'nav.profile'     },

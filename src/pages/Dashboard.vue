@@ -164,6 +164,7 @@
 <script setup>
 import { ref, computed, defineComponent, defineAsyncComponent, h } from "vue";
 import { useI18n } from "vue-i18n";
+import { showSuccess, showInfo } from "../utils/message.js";
 import { useAuthStore } from "../stores/useAuthStore.js";
 import { usePrayerStore } from "../stores/usePrayerStore.js";
 import { usePrayerTracker } from "../composables/usePrayerTracker.js";
@@ -239,7 +240,10 @@ async function handleComplete(prayer) {
   if (!uid || (prayerStore.qazo[prayer] || 0) <= 0) return;
 
   const added = await tracker.addPrayerDone(uid, prayer);
-  if (added) prayerStore.completePrayer(prayer);
+  if (added) {
+    prayerStore.completePrayer(prayer);
+    showSuccess(`${t(`prayers.${prayer}`)} ${t('messages.prayerCompleted')}`)
+  }
 }
 
 async function handleUndo(prayer) {
@@ -247,7 +251,10 @@ async function handleUndo(prayer) {
   if (!uid) return;
 
   const undone = await tracker.undoPrayerDone(uid, prayer);
-  if (undone) prayerStore.uncompletePrayer(prayer);
+  if (undone) {
+    prayerStore.uncompletePrayer(prayer);
+    showInfo(t('messages.prayerUndone'))
+  }
 }
 
 // ── DashboardProgress (inline sub-component) ─────────────────────────────────

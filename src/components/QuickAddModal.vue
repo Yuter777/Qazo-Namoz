@@ -144,6 +144,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePrayerStore } from '../stores/usePrayerStore.js'
 import { PRAYERS, PRAYER_EMOJIS } from '../utils/prayerConstants.js'
+import { showSuccess, showWarning } from '../utils/message.js'
 
 const { t } = useI18n()
 const prayerStore = usePrayerStore()
@@ -151,18 +152,19 @@ const prayerStore = usePrayerStore()
 const emit = defineEmits(['close'])
 
 // ── Add tab state ──
-const activeTab      = ref('add')
+const activeTab      = ref('calc')
 const selectedPrayer = ref('bomdod')
 const addCount       = ref(1)
 
 const tabs = computed(() => [
-  { id: 'add',  label: t('dashboard.quickAdd') },
   { id: 'calc', label: t('calc.calcTitle')      },
+  { id: 'add',  label: t('dashboard.quickAdd') },
 ])
 
 function onAdd() {
   const n = Math.max(1, addCount.value || 1)
   prayerStore.addQazo(selectedPrayer.value, n)
+  showSuccess(t('messages.qazoAdded'))
   emit('close')
 }
 
@@ -182,7 +184,10 @@ const calcTotal = computed(() =>
 function doCalc() {
   const from = new Date(calcFrom.value)
   const to   = new Date(calcTo.value)
-  if (isNaN(from) || isNaN(to) || from >= to) return
+  if (isNaN(from) || isNaN(to) || from >= to) {
+    showWarning(t('messages.invalidDates'))
+    return
+  }
   const days = Math.floor((to - from) / 86_400_000) + 1
   const counts = Object.fromEntries(PRAYERS.map(p => [p, days]))
   calcResult.value = { days, counts }
@@ -194,6 +199,7 @@ function doCalc() {
 function doApply() {
   prayerStore.setQazoCounts({ ...customCounts.value })
   calcApplied.value = true
+  showSuccess(t('messages.trackerUpdated'))
   setTimeout(() => emit('close'), 800)
 }
 </script>
